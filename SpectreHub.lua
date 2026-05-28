@@ -201,14 +201,14 @@ function Spectre:Window(title, subtitle)
     local MainFrame = Create("Frame", {
         Name = "Main",
         Parent = ScreenGui,
-        Size = UDim2.fromOffset(640, 440),  -- Increased dimensions
+        Size = UDim2.fromOffset(640, 440),
         Position = UDim2.new(0.5, -320, 0.5, -220),
         BackgroundColor3 = Spectre.Theme.Main,
         BorderSizePixel = 0,
         ClipsDescendants = true
     }, {
         Create("UICorner", {CornerRadius = Spectre.Theme.CornerRadius}),
-        Create("UIStroke", {Color = Spectre.Theme.Stroke, Thickness = 1.2})  -- Dark grey outer lining
+        Create("UIStroke", {Color = Spectre.Theme.Stroke, Thickness = 1.2})
     })
 
     CreateToggle(ScreenGui)
@@ -472,22 +472,5 @@ function Spectre:Window(title, subtitle)
     return Window
 end
 
--- ==========================================
--- HARDENED BOTTOM SECTION FOR GITHUB HOUSING
--- ==========================================
-
--- Automatically initialize a base window when executed
-local ActiveWindow = Spectre:Window("SPECTRE HUB", "")
-
--- Inject global metadata fields to allow flexible loadstring interaction
-Spectre.ActiveWindow = ActiveWindow
-
--- Metatable return block: allows executing both direct calls and macro functions seamlessly
-return setmetatable({}, {
-    __call = function()
-        return ActiveWindow
-    end,
-    __index = function(_, key)
-        return Spectre[key]
-    end
-})
+-- Simply hand over the library engine back to the loader script
+return Spectre
