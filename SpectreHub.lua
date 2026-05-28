@@ -16,6 +16,7 @@ local Spectre = {
     Flags = {},
     Connections = {},
     Unloaded = false,
+    ToggleGui = nil, -- Track the toggle UI container safely
     Theme = {
         Main = Color3.fromRGB(15, 15, 15),
         Secondary = Color3.fromRGB(22, 22, 22),
@@ -161,6 +162,8 @@ local function CreateToggle(targetGui)
             ToggleGui.Parent = get_hidden_gui() or gethui() 
         end
     end)
+    
+    Spectre.ToggleGui = ToggleGui -- Save reference internally
 
     local Toggle = Create("ImageButton", {
         Name = "SpectreToggle",
@@ -470,6 +473,18 @@ function Spectre:Window(title, subtitle)
 
     function Window:AddTab(name) return self:Tab(name) end
     return Window
+end
+
+-- Custom Destroy Cleanup Function
+function Spectre:Destroy()
+    if ScreenGui then ScreenGui:Destroy() end
+    if Spectre.ToggleGui then Spectre.ToggleGui:Destroy() end
+    
+    -- Fallback safety check for older executors
+    local OldMain = CoreGui:FindFirstChild("SpectreUI")
+    local OldToggle = CoreGui:FindFirstChild("SpectreToggleGui")
+    if OldMain then OldMain:Destroy() end
+    if OldToggle then OldToggle:Destroy() end
 end
 
 -- Simply hand over the library engine back to the loader script
