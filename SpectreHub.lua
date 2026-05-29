@@ -17,7 +17,6 @@ local Spectre = {
     Connections = {},
     Unloaded = false,
     ToggleGui = nil, 
-    AutoLoadEnabled = false,
     CurrentConfigName = "Default",
     Theme = {
         Main = Color3.fromRGB(15, 15, 15),
@@ -88,8 +87,7 @@ function Spectre:SaveConfig(configName)
     local success = pcall(function()
         if writefile then
             local data = {
-                Flags = Spectre.Flags,
-                AutoLoad = Spectre.AutoLoadEnabled
+                Flags = Spectre.Flags
             }
             writefile("Spectre/Configs/"..configName..".json", HttpService:JSONEncode(data))
         end
@@ -103,9 +101,11 @@ end
 
 function Spectre:LoadConfig(configName, callbacks)
     local configName = configName or Spectre.CurrentConfigName
-    if isfile and isfile("Spectre/Configs/"..configName..".json") then
+    local filePath = "Spectre/Configs/"..configName..".json"
+    
+    if isfile and isfile(filePath) then
         local success, data = pcall(function()
-            return HttpService:JSONDecode(readfile("Spectre/Configs/"..configName..".json"))
+            return HttpService:JSONDecode(readfile(filePath))
         end)
         
         if success and data then
@@ -120,7 +120,7 @@ function Spectre:LoadConfig(configName, callbacks)
             Spectre:Notify("Config Loaded", "Successfully loaded '"..configName.."'", 3)
         end
     else
-        Spectre:Notify("Notice", "No saved profile configurations found.", 3)
+        Spectre:Notify("Notice", "No configuration found for '"..configName.."'", 3)
     end
 end
 
@@ -527,10 +527,10 @@ function Spectre:Window(title)
                     Update(input) 
                 end
             end)
-            SliderFrame.InputEnded:Connect(function(input) 
+            UserInputService.InputEnded:Connect(function(input) 
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then Sliding = false end 
             end)
-            SliderFrame.InputChanged:Connect(function(input) 
+            UserInputService.InputChanged:Connect(function(input) 
                 if Sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then Update(input) end 
             end)
         end
@@ -543,34 +543,151 @@ function Spectre:Window(title)
     -- AUTOMATIC MASTER CORE SPECTRE TAB SETUP
     local CoreTab = Window:AddTab("Spectre")
     
-    CoreTab:Button("Destroy UI", function()
-        Spectre:Destroy()
-    end)
-    
-    CoreTab:Button("Save Settings Config", function()
-        Spectre:SaveConfig()
-    end)
-    
-    CoreTab:Button("Load Settings Config", function()
-        Spectre:LoadConfig(Spectre.CurrentConfigName, Window.RegisteredCallbacks)
+    -- TextBox for Config Name Input
+    local ConfigInputFrame = Create("Frame", {
+        Parent = CoreTab.Page,
+        Size = UDim2.new(1, 0, 0, 40),
+        BackgroundColor3 = Spectre.Theme.Secondary,
+        BorderSizePixel = 0
+    }, {
+        Create("UICorner", {CornerRadius = UDim.new(0, 6)}),
+        Create("TextLabel", {
+            Text = "Config Name:",
+            Size = UDim2.new(0, 100, 1, 0),
+            Position = UDim2.new(0, 12, 0, 0),
+            BackgroundTransparency = 1,
+            TextColor3 = Spectre.Theme.Text,
+            TextSize = 13,
+            Font = Spectre.Theme.Font,
+            TextXAlignment = Enum.TextXAlignment.Left
+        }),
+        Create("TextBox", {
+            Name = "Input",
+            Size = UDim2.new(1, -130, 0, 26),
+            Position = UDim2.new(0, 115, 0.5, -13),
+            BackgroundColor3 = Spectre.Theme.Main,
+            Text = Spectre.CurrentConfigName,
+            TextColor3 = Spectre.Theme.Text,
+            TextSize = 12,
+            Font = Spectre.Theme.Font,
+            ClearTextOnFocus = false
+        }, {
+            Create("UICorner", {CornerRadius = UDim.new(0, 4)}),
+            Create("UIStroke", {Color = Spectre.Theme.Stroke, Thickness = 1})
+        })
+    })
+
+    ConfigInputFrame.Input:GetPropertyChangedSignal("Text"):Connect(function()
+        Spectre.CurrentConfigName = ConfigInputFrame.Input.Text
     end)
 
-    CoreTab:Toggle("Auto-Load Profile", false, function(state)
-        Spectre.AutoLoadEnabled = state
+    -- Dynamic Selection Header Label
+    local PickerLabel = Create("TextLabel", {
+        Parent = CoreTab.Page,
+        Text = "SELECT CONFIG TO LOAD:",
+        Size = UDim2.new(1, 0, 0, 20),
+        BackgroundTransparency = 1,
+        TextColor3 = Spectre.Theme.TextDark,
+        TextSize = 11,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+
+    -- Interactive Config Picker Scrolling View Container
+    local ConfigSelectorView = Create("ScrollingFrame", {
+        Parent = CoreTab.Page,
+        Size = UDim2.new(1, 0, 0, 110),
+        BackgroundColor3 = Spectre.Theme.Secondary,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = Spectre.Theme.Accent,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y
+    }, {
+        Create("UICorner", {CornerRadius = UDim.new(0, 6)}),
+        Create("UIPadding", {PaddingTop = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6)}),
+        Create("UIListLayout", {Padding = UDim.new(0, 4)})
+    })
+
+    -- Scanner function to look inside file architecture
+    local function RefreshConfigPicker()
+        for _, child in pairs(ConfigSelectorView:GetChildren()) do
+            if child:IsA("TextButton") then child:Destroy() end
+        end
+
+        if listfiles and isfolder and isfolder("Spectre/Configs") then
+            local files = listfiles("Spectre/Configs")
+            for _, path in pairs(files) do
+                local name = path:match("([^/\\]+)%.json$")
+                if name then
+                    local FileBtn = Create("TextButton", {
+                        Parent = ConfigSelectorView,
+                        Size = UDim2.new(1, 0, 0, 28),
+                        BackgroundColor3 = Spectre.Theme.Main,
+                        Text = "  " .. name,
+                        TextColor3 = (Spectre.CurrentConfigName == name) and Spectre.Theme.Accent or Spectre.Theme.Text,
+                        TextSize = 12,
+                        Font = Spectre.Theme.Font,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        AutoButtonColor = true
+                    }, { Create("UICorner", {CornerRadius = UDim.new(0, 4)}) })
+
+                    FileBtn.MouseButton1Click:Connect(function()
+                        Spectre.CurrentConfigName = name
+                        ConfigInputFrame.Input.Text = name
+                        RefreshConfigPicker()
+                        Spectre:LoadConfig(name, Window.RegisteredCallbacks)
+                    end)
+                end
+            end
+        end
+    end
+
+    -- Initial load scan build trigger
+    RefreshConfigPicker()
+    
+    -- Action Operation Management Buttons
+    CoreTab:Button("Save Current Config Setup", function()
+        if Spectre.CurrentConfigName == "" then
+            Spectre:Notify("Error", "Please enter a valid config name!", 3)
+            return
+        end
+        Spectre:SaveConfig(Spectre.CurrentConfigName)
+        RefreshConfigPicker()
+    end)
+
+    CoreTab:Button("Set Active Profile as Auto-Load", function()
+        if Spectre.CurrentConfigName == "" then return end
         if writefile then
             pcall(function()
-                writefile("Spectre/AutoLoad.txt", tostring(state))
+                writefile("Spectre/AutoLoad.txt", Spectre.CurrentConfigName)
+                Spectre:Notify("Auto-Load Set", "'" .. Spectre.CurrentConfigName .. "' configured to launch on execute.", 3)
             end)
         end
+    end)
+
+    CoreTab:Button("Wipe Auto-Load Setup from Disk", function()
+        if isfile and isfile("Spectre/AutoLoad.txt") then
+            pcall(function()
+                delfile("Spectre/AutoLoad.txt")
+                Spectre:Notify("Auto-Load Wiped", "Startup configurations turned off.", 3)
+            end)
+        end
+    end)
+    
+    CoreTab:Button("Destroy UI Entirely", function()
+        Spectre:Destroy()
     end)
 
     -- Handle Startup Auto Load Routine Safely
     task.spawn(function()
         if isfile and isfile("Spectre/AutoLoad.txt") then
-            local check = readfile("Spectre/AutoLoad.txt")
-            if check == "true" then
+            local autoConfig = readfile("Spectre/AutoLoad.txt")
+            if autoConfig and autoConfig ~= "" then
                 task.wait(0.5)
-                Spectre:LoadConfig(Spectre.CurrentConfigName, Window.RegisteredCallbacks)
+                Spectre.CurrentConfigName = autoConfig
+                ConfigInputFrame.Input.Text = autoConfig
+                RefreshConfigPicker()
+                Spectre:LoadConfig(autoConfig, Window.RegisteredCallbacks)
             end
         end
     end)
