@@ -16,18 +16,28 @@ local Spectre = {
     Flags = {},
     Connections = {},
     Unloaded = false,
-    ToggleGui = nil, -- Track the toggle UI container safely
+    ToggleGui = nil, 
+    AutoLoadEnabled = false,
+    CurrentConfigName = "Default",
     Theme = {
         Main = Color3.fromRGB(15, 15, 15),
         Secondary = Color3.fromRGB(22, 22, 22),
         Accent = Color3.fromRGB(120, 80, 255),
         Text = Color3.fromRGB(240, 240, 240),
         TextDark = Color3.fromRGB(150, 150, 150),
-        Stroke = Color3.fromRGB(35, 35, 35),  -- Dark grey outer lining
+        Stroke = Color3.fromRGB(35, 35, 35),  
         Font = Enum.Font.GothamMedium,
         CornerRadius = UDim.new(0, 8)
     }
 }
+
+-- Folder Generation
+pcall(function()
+    if makefolder then
+        makefolder("Spectre")
+        makefolder("Spectre/Configs")
+    end
+end)
 
 -- Utility Functions
 local function Create(class, props, children)
@@ -56,7 +66,6 @@ local ScreenGui = Create("ScreenGui", {
     ResetOnSpawn = false
 })
 
--- Executor Protection
 pcall(function()
     if get_hidden_gui or gethui then
         ScreenGui.Parent = get_hidden_gui() or gethui()
@@ -74,21 +83,44 @@ UpdateScaling()
 workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateScaling)
 
 -- Improved Config System (File-based)
-function Spectre:SaveConfig(configName, data)
+function Spectre:SaveConfig(configName)
+    local configName = configName or Spectre.CurrentConfigName
     local success = pcall(function()
-        writefile("Spectre/Configs/"..configName..".json", HttpService:JSONEncode(data))
+        if writefile then
+            local data = {
+                Flags = Spectre.Flags,
+                AutoLoad = Spectre.AutoLoadEnabled
+            }
+            writefile("Spectre/Configs/"..configName..".json", HttpService:JSONEncode(data))
+        end
     end)
     if success then 
         Spectre:Notify("Config Saved", "Successfully saved '"..configName.."'", 3) 
     else
-        Spectre:Notify("Error", "Failed to save config", 3)
+        Spectre:Notify("Error", "Failed to save config data", 3)
     end
 end
 
-function Spectre:LoadConfig(configName, callback)
-    if isfile("Spectre/Configs/"..configName..".json") then
-        local data = readfile("Spectre/Configs/"..configName..".json")
-        callback(HttpService:JSONDecode(data))
+function Spectre:LoadConfig(configName, callbacks)
+    local configName = configName or Spectre.CurrentConfigName
+    if isfile and isfile("Spectre/Configs/"..configName..".json") then
+        local success, data = pcall(function()
+            return HttpService:JSONDecode(readfile("Spectre/Configs/"..configName..".json"))
+        end)
+        
+        if success and data then
+            if data.Flags then
+                for flag, value in pairs(data.Flags) do
+                    Spectre.Flags[flag] = value
+                    if callbacks and callbacks[flag] then
+                        task.spawn(callbacks[flag], value)
+                    end
+                end
+            end
+            Spectre:Notify("Config Loaded", "Successfully loaded '"..configName.."'", 3)
+        end
+    else
+        Spectre:Notify("Notice", "No saved profile configurations found.", 3)
     end
 end
 
@@ -147,13 +179,15 @@ function Spectre:Notify(title, msg, duration)
     })
     Tween(Frame, {Size = UDim2.new(0, 280, 0, 70)}, 0.6, Enum.EasingStyle.Back)
     task.delay(duration or 4, function()
-        Tween(Frame, {Size = UDim2.new(0, 280, 0, 0), BackgroundTransparency = 1}, 0.5)
-        task.wait(0.5)
-        Frame:Destroy()
+        if Frame and Frame.Parent then
+            Tween(Frame, {Size = UDim2.new(0, 280, 0, 0), BackgroundTransparency = 1}, 0.5)
+            task.wait(0.5)
+            Frame:Destroy()
+        end
     end)
 end
 
--- Floating Toggle Button
+-- Floating Toggle Button with Smart Mobile Touch Fix
 local function CreateToggle(targetGui)
     local ToggleGui = Create("ScreenGui", { Name = "SpectreToggleGui", Parent = CoreGui, ResetOnSpawn = false })
 
@@ -163,7 +197,7 @@ local function CreateToggle(targetGui)
         end
     end)
     
-    Spectre.ToggleGui = ToggleGui -- Save reference internally
+    Spectre.ToggleGui = ToggleGui
 
     local Toggle = Create("ImageButton", {
         Name = "SpectreToggle",
@@ -176,30 +210,46 @@ local function CreateToggle(targetGui)
         BorderSizePixel = 0
     }, { Create("UICorner", {CornerRadius = UDim.new(0, 12)}) })
 
-    local dragging, dragStart, startPos
+    local dragging = false
+    local dragStart, startPos
+    local hasMovedPastThreshold = false
+    local DRAG_THRESHOLD = 7
+
     Toggle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = Toggle.Position
+            hasMovedPastThreshold = false
         end
     end)
 
     UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStart
-            Toggle.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            if hasMovedPastThreshold or delta.Magnitude > DRAG_THRESHOLD then
+                hasMovedPastThreshold = true
+                Toggle.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            end
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
         end
     end)
 
     Toggle.MouseButton1Click:Connect(function()
-        targetGui.Enabled = not targetGui.Enabled
+        if not hasMovedPastThreshold then
+            targetGui.Enabled = not targetGui.Enabled
+        end
     end)
 end
 
 -- Main Window Function
-function Spectre:Window(title, subtitle)
-    local Window = { CurrentTab = nil, Tabs = {} }
+function Spectre:Window(title)
+    local Window = { CurrentTab = nil, Tabs = {}, RegisteredCallbacks = {} }
 
     local MainFrame = Create("Frame", {
         Name = "Main",
@@ -216,19 +266,29 @@ function Spectre:Window(title, subtitle)
 
     CreateToggle(ScreenGui)
 
+    -- FIXED MAIN FRAME DRAGGING ENGINE (Prevents scrolling conflicts)
     local dragging, dragStart, startPos
     MainFrame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = MainFrame.Position
+            local relativeY = input.Position.Y - MainFrame.AbsolutePosition.Y
+            if relativeY >= 0 and relativeY <= 45 then
+                dragging = true
+                dragStart = input.Position
+                startPos = MainFrame.Position
+            end
         end
     end)
 
     UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStart
-            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + (delta.X / UIScale.Scale), startPos.Y.Scale, startPos.Y.Offset + (delta.Y / UIScale.Scale))
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
         end
     end)
 
@@ -249,20 +309,11 @@ function Spectre:Window(title, subtitle)
         Create("TextLabel", {
             Text = title or "SPECTRE",
             Size = UDim2.new(1, 0, 0, 40),
-            Position = UDim2.new(0, 0, 0, 10),
+            Position = UDim2.new(0, 0, 0, 15), 
             BackgroundTransparency = 1,
             TextColor3 = Spectre.Theme.Accent,
             TextSize = 18,
             Font = Enum.Font.GothamBold
-        }),
-        Create("TextLabel", {
-            Text = subtitle or "",
-            Size = UDim2.new(1, 0, 0, 20),
-            Position = UDim2.new(0, 0, 0, 35),
-            BackgroundTransparency = 1,
-            TextColor3 = Spectre.Theme.TextDark,
-            TextSize = 10,
-            Font = Spectre.Theme.Font
         })
     })
 
@@ -338,8 +389,13 @@ function Spectre:Window(title, subtitle)
             Window.CurrentTab = {Button = TabButton, Page = Page}
         end
 
-        function Tab:Toggle(name, default, callback)
+        function Tab:Toggle(name, flag, default, callback)
             local State = default or false
+            if flag then 
+                Spectre.Flags[flag] = State 
+                Window.RegisteredCallbacks[flag] = callback
+            end
+
             local ToggleFrame = Create("Frame", {
                 Parent = Page,
                 Size = UDim2.new(1, 0, 0, 40),
@@ -375,11 +431,16 @@ function Spectre:Window(title, subtitle)
                 })
             })
 
-            ToggleFrame.Switch.MouseButton1Click:Connect(function()
-                State = not State
+            local function SetState(newState)
+                State = newState
+                if flag then Spectre.Flags[flag] = State end
                 Tween(ToggleFrame.Switch, {BackgroundColor3 = State and Spectre.Theme.Accent or Spectre.Theme.Main}, 0.2)
                 Tween(ToggleFrame.Switch.Dot, {Position = State and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)}, 0.2)
                 callback(State)
+            end
+
+            ToggleFrame.Switch.MouseButton1Click:Connect(function()
+                SetState(not State)
             end)
         end
 
@@ -400,8 +461,13 @@ function Spectre:Window(title, subtitle)
             Btn.MouseButton1Click:Connect(callback)
         end
 
-        function Tab:Slider(name, min, max, default, callback)
+        function Tab:Slider(name, flag, min, max, default, callback)
             local Value = default or min
+            if flag then 
+                Spectre.Flags[flag] = Value 
+                Window.RegisteredCallbacks[flag] = callback
+            end
+
             local SliderFrame = Create("Frame", {
                 Parent = Page,
                 Size = UDim2.new(1, 0, 0, 50),
@@ -450,21 +516,22 @@ function Spectre:Window(title, subtitle)
                 Value = math.floor(min + (max - min) * pos)
                 SliderFrame.ValLabel.Text = tostring(Value)
                 SliderFrame.BarBG.Fill.Size = UDim2.new(pos, 0, 1, 0)
+                if flag then Spectre.Flags[flag] = Value end
                 callback(Value)
             end
 
             local Sliding = false
             SliderFrame.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then 
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
                     Sliding = true
                     Update(input) 
                 end
             end)
-            UserInputService.InputEnded:Connect(function(input) 
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then Sliding = false end 
+            SliderFrame.InputEnded:Connect(function(input) 
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then Sliding = false end 
             end)
-            UserInputService.InputChanged:Connect(function(input) 
-                if Sliding and input.UserInputType == Enum.UserInputType.MouseMovement then Update(input) end 
+            SliderFrame.InputChanged:Connect(function(input) 
+                if Sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then Update(input) end 
             end)
         end
 
@@ -472,6 +539,42 @@ function Spectre:Window(title, subtitle)
     end
 
     function Window:AddTab(name) return self:Tab(name) end
+
+    -- AUTOMATIC MASTER CORE SPECTRE TAB SETUP
+    local CoreTab = Window:AddTab("Spectre")
+    
+    CoreTab:Button("Destroy UI", function()
+        Spectre:Destroy()
+    end)
+    
+    CoreTab:Button("Save Settings Config", function()
+        Spectre:SaveConfig()
+    end)
+    
+    CoreTab:Button("Load Settings Config", function()
+        Spectre:LoadConfig(Spectre.CurrentConfigName, Window.RegisteredCallbacks)
+    end)
+
+    CoreTab:Toggle("Auto-Load Profile", false, function(state)
+        Spectre.AutoLoadEnabled = state
+        if writefile then
+            pcall(function()
+                writefile("Spectre/AutoLoad.txt", tostring(state))
+            end)
+        end
+    end)
+
+    -- Handle Startup Auto Load Routine Safely
+    task.spawn(function()
+        if isfile and isfile("Spectre/AutoLoad.txt") then
+            local check = readfile("Spectre/AutoLoad.txt")
+            if check == "true" then
+                task.wait(0.5)
+                Spectre:LoadConfig(Spectre.CurrentConfigName, Window.RegisteredCallbacks)
+            end
+        end
+    end)
+
     return Window
 end
 
@@ -480,12 +583,10 @@ function Spectre:Destroy()
     if ScreenGui then ScreenGui:Destroy() end
     if Spectre.ToggleGui then Spectre.ToggleGui:Destroy() end
     
-    -- Fallback safety check for older executors
     local OldMain = CoreGui:FindFirstChild("SpectreUI")
     local OldToggle = CoreGui:FindFirstChild("SpectreToggleGui")
     if OldMain then OldMain:Destroy() end
     if OldToggle then OldToggle:Destroy() end
 end
 
--- Simply hand over the library engine back to the loader script
 return Spectre
