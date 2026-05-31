@@ -86,7 +86,7 @@ local UI = {
 function UI:CreateTab(tabName)
     UI.TabCount = UI.TabCount + 1
     local isFirst = (UI.TabCount == 1)
-    
+
     -- Tab Selection Navigation Button
     local tabBtn = Instance.new("TextButton")
     tabBtn.Size = UDim2.new(0, 60, 1, 0)
@@ -163,7 +163,8 @@ end
 -- ====================================================
 
 function UI:AddToggle(section, labelText, defaultState, callback)
-    section.OrderIndex = section.OrderIndex + 2
+    local targetContainer = section.Left and section.Left or section
+    targetContainer.OrderIndex = targetContainer.OrderIndex + 2
     local cb = callback or function() end
 
     local lbl = Instance.new("TextLabel")
@@ -174,8 +175,8 @@ function UI:AddToggle(section, labelText, defaultState, callback)
     lbl.Font = Enum.Font.Arcade
     lbl.TextSize = 10 
     lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.LayoutOrder = section.OrderIndex
-    lbl.Parent = section.Left and section.Left or section
+    lbl.LayoutOrder = targetContainer.OrderIndex
+    lbl.Parent = targetContainer
 
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 13)
@@ -185,8 +186,8 @@ function UI:AddToggle(section, labelText, defaultState, callback)
     btn.Font = Enum.Font.Arcade
     btn.TextSize = 10 
     btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.LayoutOrder = section.OrderIndex + 1
-    btn.Parent = lbl.Parent
+    btn.LayoutOrder = targetContainer.OrderIndex + 1
+    btn.Parent = targetContainer
 
     local check = Instance.new("Frame")
     check.Size = UDim2.new(0, 7, 0, 7)
@@ -205,7 +206,8 @@ function UI:AddToggle(section, labelText, defaultState, callback)
 end
 
 function UI:AddSlider(section, labelText, current, max, callback)
-    section.OrderIndex = section.OrderIndex + 2
+    local targetContainer = section.Left and section.Left or section
+    targetContainer.OrderIndex = targetContainer.OrderIndex + 2
     local cb = callback or function() end
 
     local lbl = Instance.new("TextLabel")
@@ -216,15 +218,15 @@ function UI:AddSlider(section, labelText, current, max, callback)
     lbl.Font = Enum.Font.Arcade
     lbl.TextSize = 10 
     lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.LayoutOrder = section.OrderIndex
-    lbl.Parent = section.Left and section.Left or section
+    lbl.LayoutOrder = targetContainer.OrderIndex
+    lbl.Parent = targetContainer
 
     local track = Instance.new("Frame")
     track.Size = UDim2.new(1, 0, 0, 9)
     track.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
     track.BorderColor3 = Color3.fromRGB(32, 32, 35)
-    track.LayoutOrder = section.OrderIndex + 1
-    track.Parent = lbl.Parent
+    track.LayoutOrder = targetContainer.OrderIndex + 1
+    track.Parent = targetContainer
 
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new(current/max, 0, 1, 0)
@@ -247,7 +249,7 @@ function UI:AddSlider(section, labelText, current, max, callback)
         local relativeX = math.clamp(input.Position.X - track.AbsolutePosition.X, 0, totalSize)
         local percentage = relativeX / totalSize
         local value = math.round(percentage * max)
-        
+
         fill.Size = UDim2.new(percentage, 0, 1, 0)
         val.Text = value .. "/" .. max
         pcall(cb, value)
@@ -275,7 +277,8 @@ function UI:AddSlider(section, labelText, current, max, callback)
 end
 
 function UI:AddDropdown(section, labelText, defaultSelected, optionsList, callback)
-    section.OrderIndex = section.OrderIndex + 2
+    local targetContainer = section.Left and section.Left or section
+    targetContainer.OrderIndex = targetContainer.OrderIndex + 2
     local cb = callback or function() end
 
     local lbl = Instance.new("TextLabel")
@@ -286,15 +289,17 @@ function UI:AddDropdown(section, labelText, defaultSelected, optionsList, callba
     lbl.Font = Enum.Font.Arcade
     lbl.TextSize = 10 
     lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.LayoutOrder = section.OrderIndex
-    lbl.Parent = section.Left and section.Left or section
+    lbl.LayoutOrder = targetContainer.OrderIndex
+    lbl.Parent = targetContainer
 
-    local box = Instance.new("Frame")
+    -- Converted from basic Frame to TextButton to allow selection clicks
+    local box = Instance.new("TextButton")
     box.Size = UDim2.new(1, 0, 0, 15)
     box.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
     box.BorderColor3 = Color3.fromRGB(32, 32, 35)
-    box.LayoutOrder = section.OrderIndex + 1
-    box.Parent = lbl.Parent
+    box.LayoutOrder = targetContainer.OrderIndex + 1
+    box.Text = ""
+    box.Parent = targetContainer
 
     local txt = Instance.new("TextLabel")
     txt.Size = UDim2.new(1, -6, 1, 0)
@@ -306,6 +311,21 @@ function UI:AddDropdown(section, labelText, defaultSelected, optionsList, callba
     txt.TextSize = 9 
     txt.TextXAlignment = Enum.TextXAlignment.Left
     txt.Parent = box
+
+    -- Tracks current position inside option table array list
+    local currentIndex = 1
+    for i, v in ipairs(optionsList) do
+        if v == defaultSelected then currentIndex = i break end
+    end
+
+    -- Loops options array sequentially whenever you click the element box frame
+    box.MouseButton1Click:Connect(function()
+        currentIndex = currentIndex + 1
+        if currentIndex > #optionsList then currentIndex = 1 end
+        local selected = optionsList[currentIndex]
+        txt.Text = selected
+        pcall(cb, selected)
+    end)
 end
 
 -- ====================================================
@@ -347,7 +367,7 @@ MenuFrame.InputBegan:Connect(function(input)
             dragging = true
             dragStart = input.Position
             startPos = MenuFrame.AbsolutePosition
-            
+
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then dragging = false end
             end)
@@ -368,7 +388,7 @@ ResizeHandle.InputBegan:Connect(function(input)
         resizing = true
         resizeStart = input.Position
         startSize = MenuFrame.Size
-        
+
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then resizing = false end
         end)
@@ -380,13 +400,12 @@ UserInputService.InputChanged:Connect(function(input)
         local delta = input.Position - resizeStart
         local rawNewWidth = startSize.X.Offset + (delta.X / MasterScale.Scale)
         local rawNewHeight = startSize.Y.Offset + (delta.Y / MasterScale.Scale)
-        
+
         local clampedWidth = math.clamp(rawNewWidth, 340, 750)
         local clampedHeight = math.clamp(rawNewHeight, 260, 550)
-        
+
         MenuFrame.Size = UDim2.new(0, clampedWidth, 0, clampedHeight)
     end
 end)
 
--- Return the framework object to loadstring listeners
 return UI
