@@ -1,6 +1,5 @@
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
-local Players = game:GetService("Players")
 
 -- Clean up old instances of SpectreUi
 if CoreGui:FindFirstChild("SpectreUi") then
@@ -11,11 +10,13 @@ local AbyssUI = Instance.new("ScreenGui")
 AbyssUI.Name = "SpectreV3"
 AbyssUI.Parent = CoreGui
 
--- UNIVERSAL SCALER
+-- UNIVERSAL SCALER (Locked at 0.78 for the menu frame)
 local MasterScale = Instance.new("UIScale")
 MasterScale.Scale = 0.78
 
--- FLOATING TOGGLE
+-- ====================================================
+-- FLOATING TOGGLE INTERFACE
+-- ====================================================
 local FloatingToggle = Instance.new("TextButton")
 FloatingToggle.Size = UDim2.new(0, 85, 0, 24)
 FloatingToggle.Position = UDim2.new(0, 15, 0, 15)
@@ -28,7 +29,13 @@ FloatingToggle.Font = Enum.Font.Arcade
 FloatingToggle.TextSize = 12
 FloatingToggle.Parent = AbyssUI
 
--- MAIN WINDOW
+local ToggleScale = Instance.new("UIScale")
+ToggleScale.Scale = 1.0 
+ToggleScale.Parent = FloatingToggle
+
+-- ====================================================
+-- MAIN MODULE WINDOW FRAME 
+-- ====================================================
 local MenuFrame = Instance.new("Frame")
 MenuFrame.Size = UDim2.new(0, 440, 0, 340) 
 MenuFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -37,104 +44,362 @@ MenuFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 22)
 MenuFrame.BorderColor3 = Color3.fromRGB(45, 45, 48)
 MenuFrame.BorderSizePixel = 1
 MenuFrame.Active = true
+MenuFrame.ClipsDescendants = false
 MenuFrame.Parent = AbyssUI
 
 local WindowScale = MasterScale:Clone()
 WindowScale.Parent = MenuFrame
 
--- Tabs and Content
-local TabsHeader = Instance.new("Frame", MenuFrame)
+-- Tab Navigation Row
+local TabsHeader = Instance.new("Frame")
 TabsHeader.Size = UDim2.new(1, -16, 0, 18)
 TabsHeader.Position = UDim2.new(0, 8, 0, 8)
-TabsHeader.BackgroundTransparency = 1
+TabsHeader.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
+TabsHeader.BorderColor3 = Color3.fromRGB(35, 35, 38)
+TabsHeader.BorderSizePixel = 1
+TabsHeader.Parent = MenuFrame
 
-local ContentContainer = Instance.new("Frame", MenuFrame)
+local TabsLayout = Instance.new("UIListLayout")
+TabsLayout.FillDirection = Enum.FillDirection.Horizontal
+TabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabsLayout.Padding = UDim.new(0, 1)
+TabsLayout.Parent = TabsHeader
+
+-- Content Boundary Container
+local ContentContainer = Instance.new("Frame")
 ContentContainer.Size = UDim2.new(1, -16, 1, -40)
 ContentContainer.Position = UDim2.new(0, 8, 0, 32)
-ContentContainer.BackgroundTransparency = 1
+ContentContainer.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
+ContentContainer.BorderColor3 = Color3.fromRGB(32, 32, 35)
+ContentContainer.BorderSizePixel = 1
+ContentContainer.Parent = MenuFrame
 
-local UI = { TabCount = 0 }
+-- ====================================================
+-- REPOS-READY MODULAR FRAMEWORK OBJECT
+-- ====================================================
+local UI = {
+    Tabs = {},
+    ActiveTab = nil,
+    TabCount = 0
+}
 
 function UI:CreateTab(tabName)
     UI.TabCount = UI.TabCount + 1
     local isFirst = (UI.TabCount == 1)
 
-    local tabBtn = Instance.new("TextButton", TabsHeader)
+    -- Tab Selection Navigation Button
+    local tabBtn = Instance.new("TextButton")
     tabBtn.Size = UDim2.new(0, 60, 1, 0)
     tabBtn.BackgroundColor3 = isFirst and Color3.fromRGB(24, 24, 28) or Color3.fromRGB(16, 16, 18)
+    tabBtn.BorderColor3 = Color3.fromRGB(35, 35, 38)
     tabBtn.Text = tabName
+    tabBtn.TextColor3 = isFirst and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(140, 140, 145)
     tabBtn.Font = Enum.Font.Arcade
     tabBtn.TextSize = 10 
     tabBtn.LayoutOrder = UI.TabCount
+    tabBtn.Parent = TabsHeader
 
-    local viewFrame = Instance.new("Frame", ContentContainer)
+    -- Internal Frame View Handler
+    local viewFrame = Instance.new("Frame")
     viewFrame.Size = UDim2.new(1, 0, 1, 0)
     viewFrame.BackgroundTransparency = 1
     viewFrame.Visible = isFirst
+    viewFrame.Parent = ContentContainer
 
+    -- Auto Columns Creation Inside Layout View
     local function CreateSection(pos)
-        local box = Instance.new("Frame", viewFrame)
+        local box = Instance.new("Frame")
         box.Size = UDim2.new(0.5, -9, 1, -12)
         box.Position = pos
         box.BackgroundColor3 = Color3.fromRGB(17, 17, 19)
-        Instance.new("UIListLayout", box).Padding = UDim.new(0, 5)
-        Instance.new("UIPadding", box).PaddingTop = UDim.new(0, 8)
+        box.BorderColor3 = Color3.fromRGB(32, 32, 35)
+        box.BorderSizePixel = 1
+        box.Parent = viewFrame
+
+        local list = Instance.new("UIListLayout")
+        list.Padding = UDim.new(0, 5)
+        list.SortOrder = Enum.SortOrder.LayoutOrder
+        list.Parent = box
+
+        local pad = Instance.new("UIPadding")
+        pad.PaddingTop = UDim.new(0, 8)
+        pad.PaddingLeft = UDim.new(0, 8)
+        pad.PaddingRight = UDim.new(0, 8)
+        pad.Parent = box
+
         return box
     end
 
-    local tabObj = { Left = CreateSection(UDim2.new(0, 6, 0, 6)), Right = CreateSection(UDim2.new(0.5, 3, 0, 6)), OrderIndex = 0 }
-    
+    local leftSection = CreateSection(UDim2.new(0, 6, 0, 6))
+    local rightSection = CreateSection(UDim2.new(0.5, 3, 0, 6))
+
+    local tabObj = {
+        Left = leftSection,
+        Right = rightSection,
+        Button = tabBtn,
+        Frame = viewFrame,
+        OrderIndex = 1
+    }
+
+    if isFirst then UI.ActiveTab = tabObj end
+
     tabBtn.MouseButton1Click:Connect(function()
-        for _, v in pairs(ContentContainer:GetChildren()) do v.Visible = false end
+        if UI.ActiveTab then
+            UI.ActiveTab.Button.BackgroundColor3 = Color3.fromRGB(16, 16, 18)
+            UI.ActiveTab.Button.TextColor3 = Color3.fromRGB(140, 140, 145)
+            UI.ActiveTab.Frame.Visible = false
+        end
+        tabBtn.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+        tabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         viewFrame.Visible = true
+        UI.ActiveTab = tabObj
     end)
+
     return tabObj
 end
 
--- COMPONENTS
-function UI:AddToggle(section, labelText, default, callback)
-    section.OrderIndex += 2
-    local lbl = Instance.new("TextLabel", section)
+-- ====================================================
+-- RUNTIME COMPONENT CONSTRUCTORS
+-- ====================================================
+
+function UI:AddToggle(section, labelText, defaultState, callback)
+    section.OrderIndex = section.OrderIndex + 2
+    local cb = callback or function() end
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 0, 11)
+    lbl.BackgroundTransparency = 1
     lbl.Text = labelText
     lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
     lbl.Font = Enum.Font.Arcade
-    local btn = Instance.new("TextButton", lbl)
-    btn.Text = "Toggle"
-    btn.MouseButton1Click:Connect(function() pcall(callback, true) end)
+    lbl.TextSize = 10 
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.LayoutOrder = section.OrderIndex
+    lbl.Parent = section.Left and section.Left or section
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 13)
+    btn.BackgroundTransparency = 1
+    btn.Text = "   Enabled"
+    btn.TextColor3 = defaultState and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(130, 130, 135)
+    btn.Font = Enum.Font.Arcade
+    btn.TextSize = 10 
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.LayoutOrder = section.OrderIndex + 1
+    btn.Parent = lbl.Parent
+
+    local check = Instance.new("Frame")
+    check.Size = UDim2.new(0, 7, 0, 7)
+    check.Position = UDim2.new(0, 0, 0.5, -4)
+    check.BackgroundColor3 = defaultState and Color3.fromRGB(48, 110, 160) or Color3.fromRGB(28, 28, 32)
+    check.BorderColor3 = Color3.fromRGB(50, 50, 55)
+    check.Parent = btn
+
+    local active = defaultState
+    btn.MouseButton1Click:Connect(function()
+        active = not active
+        check.BackgroundColor3 = active and Color3.fromRGB(48, 110, 160) or Color3.fromRGB(28, 28, 32)
+        btn.TextColor3 = active and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(130, 130, 135)
+        pcall(cb, active)
+    end)
 end
 
-function UI:AddDropdown(section, labelText, default, options, callback)
-    section.OrderIndex += 2
-    local lbl = Instance.new("TextLabel", section)
+function UI:AddSlider(section, labelText, current, max, callback)
+    section.OrderIndex = section.OrderIndex + 2
+    local cb = callback or function() end
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 0, 11)
+    lbl.BackgroundTransparency = 1
     lbl.Text = labelText
-    lbl.Size = UDim2.new(1, 0, 0, 20)
-    
-    local box = Instance.new("TextButton", lbl)
-    box.Size = UDim2.new(1, 0, 0, 15)
-    box.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
-    box.Text = default
-    
-    box.MouseButton1Click:Connect(function()
-        if box:FindFirstChild("Popup") then box.Popup:Destroy() return end
-        
-        local pop = Instance.new("ScrollingFrame", box)
-        pop.Name = "Popup"
-        pop.Size = UDim2.new(1, 0, 0, #options * 20)
-        pop.Position = UDim2.new(0, 0, 1, 0)
-        pop.ZIndex = 10
-        Instance.new("UIListLayout", pop)
-        
-        for _, opt in ipairs(options) do
-            local item = Instance.new("TextButton", pop)
-            item.Size = UDim2.new(1, 0, 0, 20)
-            item.Text = opt
-            item.MouseButton1Click:Connect(function()
-                box.Text = opt
-                pcall(callback, opt)
-                pop:Destroy()
-            end)
+    lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+    lbl.Font = Enum.Font.Arcade
+    lbl.TextSize = 10 
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.LayoutOrder = section.OrderIndex
+    lbl.Parent = section.Left and section.Left or section
+
+    local track = Instance.new("Frame")
+    track.Size = UDim2.new(1, 0, 0, 9)
+    track.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
+    track.BorderColor3 = Color3.fromRGB(32, 32, 35)
+    track.LayoutOrder = section.OrderIndex + 1
+    track.Parent = lbl.Parent
+
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new(current/max, 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(48, 110, 160)
+    fill.BorderSizePixel = 0
+    fill.Parent = track
+
+    local val = Instance.new("TextLabel")
+    val.Size = UDim2.new(1, -4, 1, 0)
+    val.BackgroundTransparency = 1
+    val.Text = current .. "/" .. max
+    val.TextColor3 = Color3.fromRGB(150, 150, 155)
+    val.Font = Enum.Font.Arcade
+    val.TextSize = 9 
+    val.TextXAlignment = Enum.TextXAlignment.Right
+    val.Parent = track
+
+    local function UpdateSlider(input)
+        local totalSize = track.AbsoluteSize.X
+        local relativeX = math.clamp(input.Position.X - track.AbsolutePosition.X, 0, totalSize)
+        local percentage = relativeX / totalSize
+        local value = math.round(percentage * max)
+
+        fill.Size = UDim2.new(percentage, 0, 1, 0)
+        val.Text = value .. "/" .. max
+        pcall(cb, value)
+    end
+
+    local activeSliding = false
+    track.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            activeSliding = true
+            UpdateSlider(input)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if activeSliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            UpdateSlider(input)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            activeSliding = false
         end
     end)
 end
+
+function UI:AddDropdown(section, labelText, defaultSelected, optionsList, callback)
+    section.OrderIndex = section.OrderIndex + 2
+    local cb = callback or function() end
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 0, 11)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = labelText
+    lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+    lbl.Font = Enum.Font.Arcade
+    lbl.TextSize = 10 
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.LayoutOrder = section.OrderIndex
+    lbl.Parent = section.Left and section.Left or section
+
+    local box = Instance.new("TextButton")
+    box.Size = UDim2.new(1, 0, 0, 15)
+    box.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
+    box.BorderColor3 = Color3.fromRGB(32, 32, 35)
+    box.LayoutOrder = section.OrderIndex + 1
+    box.Text = ""
+    box.Parent = lbl.Parent
+
+    local txt = Instance.new("TextLabel")
+    txt.Size = UDim2.new(1, -6, 1, 0)
+    txt.Position = UDim2.new(0, 4, 0, 0)
+    txt.BackgroundTransparency = 1
+    txt.Text = defaultSelected
+    txt.TextColor3 = Color3.fromRGB(140, 140, 145)
+    txt.Font = Enum.Font.Arcade
+    txt.TextSize = 9 
+    txt.TextXAlignment = Enum.TextXAlignment.Left
+    txt.Parent = box
+
+    local currentIndex = 1
+    for i, v in ipairs(optionsList) do
+        if v == defaultSelected then currentIndex = i break end
+    end
+
+    box.MouseButton1Click:Connect(function()
+        currentIndex = currentIndex + 1
+        if currentIndex > #optionsList then currentIndex = 1 end
+        local selected = optionsList[currentIndex]
+        txt.Text = selected
+        pcall(cb, selected)
+    end)
+end
+
+-- ====================================================
+-- RESIZER HANDLE
+-- ====================================================
+local ResizeHandle = Instance.new("TextButton")
+ResizeHandle.Size = UDim2.new(0, 10, 0, 10)
+ResizeHandle.Position = UDim2.new(1, -10, 1, -10)
+ResizeHandle.BackgroundColor3 = Color3.fromRGB(35, 35, 38)
+ResizeHandle.BorderColor3 = Color3.fromRGB(55, 55, 60)
+ResizeHandle.BorderSizePixel = 1
+ResizeHandle.Text = ""
+ResizeHandle.AutoButtonColor = false
+ResizeHandle.ZIndex = 5
+ResizeHandle.Parent = MenuFrame
+
+local ResizeDot = Instance.new("Frame")
+ResizeDot.Size = UDim2.new(0, 3, 0, 3)
+ResizeDot.Position = UDim2.new(0.5, -1, 0.5, -1)
+ResizeDot.BackgroundColor3 = Color3.fromRGB(140, 140, 145)
+ResizeDot.BorderSizePixel = 0
+ResizeDot.Parent = ResizeHandle
+
+-- ====================================================
+-- SMOOTHED INTERACTION DRIVERS
+-- ====================================================
+local menuVisible = true
+FloatingToggle.MouseButton1Click:Connect(function()
+    menuVisible = not menuVisible
+    MenuFrame.Visible = menuVisible
+    FloatingToggle.Text = menuVisible and "[x] TOGGLE" or "[ ] TOGGLE"
+    FloatingToggle.TextColor3 = menuVisible and Color3.fromRGB(240, 240, 240) or Color3.fromRGB(140, 140, 145)
+end)
+
+local dragging, dragStart, startPos
+MenuFrame.InputBegan:Connect(function(input)
+    if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and UserInputService:GetFocusedTextBox() == nil then
+        if input.Position.Y - MenuFrame.AbsolutePosition.Y <= (30 * MasterScale.Scale) then
+            dragging = true
+            dragStart = input.Position
+            startPos = MenuFrame.AbsolutePosition
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        MenuFrame.Position = UDim2.new(0, startPos.X + (delta.X / MasterScale.Scale) + (MenuFrame.Size.X.Offset * MenuFrame.AnchorPoint.X), 0, startPos.Y + (delta.Y / MasterScale.Scale) + (MenuFrame.Size.Y.Offset * MenuFrame.AnchorPoint.Y))
+    end
+end)
+
+local resizing, resizeStart, startSize
+ResizeHandle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        resizing = true
+        resizeStart = input.Position
+        startSize = MenuFrame.Size
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then resizing = false end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - resizeStart
+        local rawNewWidth = startSize.X.Offset + (delta.X / MasterScale.Scale)
+        local rawNewHeight = startSize.Y.Offset + (delta.Y / MasterScale.Scale)
+
+        local clampedWidth = math.clamp(rawNewWidth, 340, 750)
+        local clampedHeight = math.clamp(rawNewHeight, 260, 550)
+
+        MenuFrame.Size = UDim2.new(0, clampedWidth, 0, clampedHeight)
+    end
+end)
 
 return UI
