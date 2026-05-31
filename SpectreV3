@@ -1,6 +1,7 @@
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 
+-- Clean up old instances
 if CoreGui:FindFirstChild("SpectreUi") then
     CoreGui.SpectreUi:Destroy()
 end
@@ -12,6 +13,7 @@ AbyssUI.Parent = CoreGui
 local MasterScale = Instance.new("UIScale")
 MasterScale.Scale = 0.78
 
+-- Toggle Button
 local FloatingToggle = Instance.new("TextButton")
 FloatingToggle.Size = UDim2.new(0, 85, 0, 24)
 FloatingToggle.Position = UDim2.new(0, 15, 0, 15)
@@ -28,6 +30,7 @@ local ToggleScale = Instance.new("UIScale")
 ToggleScale.Scale = 1.0 
 ToggleScale.Parent = FloatingToggle
 
+-- Menu Frame
 local MenuFrame = Instance.new("Frame")
 MenuFrame.Size = UDim2.new(0, 440, 0, 340) 
 MenuFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -42,6 +45,7 @@ MenuFrame.Parent = AbyssUI
 local WindowScale = MasterScale:Clone()
 WindowScale.Parent = MenuFrame
 
+-- Tab Navigation
 local TabsHeader = Instance.new("Frame")
 TabsHeader.Size = UDim2.new(1, -16, 0, 18)
 TabsHeader.Position = UDim2.new(0, 8, 0, 8)
@@ -63,6 +67,14 @@ ContentContainer.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 ContentContainer.BorderColor3 = Color3.fromRGB(32, 32, 35)
 ContentContainer.BorderSizePixel = 1
 ContentContainer.Parent = MenuFrame
+
+-- Middle Divider Line
+local Divider = Instance.new("Frame")
+Divider.Size = UDim2.new(0, 1, 1, -12)
+Divider.Position = UDim2.new(0.5, 0, 0, 6)
+Divider.BackgroundColor3 = Color3.fromRGB(32, 32, 35)
+Divider.BorderSizePixel = 0
+Divider.Parent = ContentContainer
 
 local UI = { Tabs = {}, ActiveTab = nil, TabCount = 0 }
 
@@ -223,6 +235,68 @@ function UI:AddDropdown(section, labelText, defaultSelected, optionsList, callba
     end)
 end
 
+function UI:AddSlider(section, labelText, current, max, callback)
+    section.OrderIndex = section.OrderIndex + 2
+    local cb = callback or function() end
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 0, 11)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = labelText
+    lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+    lbl.Font = Enum.Font.Arcade
+    lbl.TextSize = 10 
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.LayoutOrder = section.OrderIndex
+    lbl.Parent = section
+    local track = Instance.new("Frame")
+    track.Size = UDim2.new(1, 0, 0, 9)
+    track.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
+    track.BorderColor3 = Color3.fromRGB(32, 32, 35)
+    track.LayoutOrder = section.OrderIndex + 1
+    track.Parent = lbl.Parent
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new(current/max, 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(48, 110, 160)
+    fill.BorderSizePixel = 0
+    fill.Parent = track
+    local val = Instance.new("TextLabel")
+    val.Size = UDim2.new(1, -4, 1, 0)
+    val.BackgroundTransparency = 1
+    val.Text = current .. "/" .. max
+    val.TextColor3 = Color3.fromRGB(150, 150, 155)
+    val.Font = Enum.Font.Arcade
+    val.TextSize = 9 
+    val.TextXAlignment = Enum.TextXAlignment.Right
+    val.Parent = track
+    local function UpdateSlider(input)
+        local totalSize = track.AbsoluteSize.X
+        local relativeX = math.clamp(input.Position.X - track.AbsolutePosition.X, 0, totalSize)
+        local percentage = relativeX / totalSize
+        local value = math.round(percentage * max)
+        fill.Size = UDim2.new(percentage, 0, 1, 0)
+        val.Text = value .. "/" .. max
+        pcall(cb, value)
+    end
+    local activeSliding = false
+    track.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            activeSliding = true
+            UpdateSlider(input)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if activeSliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            UpdateSlider(input)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            activeSliding = false
+        end
+    end)
+end
+
+-- Interactions
 local menuVisible = true
 FloatingToggle.MouseButton1Click:Connect(function()
     menuVisible = not menuVisible
