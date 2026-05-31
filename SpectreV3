@@ -223,7 +223,7 @@ function UI:AddDropdown(section, labelText, defaultSelected, optionsList, callba
     end)
 end
 
--- Interactions
+local menuVisible = true
 FloatingToggle.MouseButton1Click:Connect(function()
     menuVisible = not menuVisible
     MenuFrame.Visible = menuVisible
