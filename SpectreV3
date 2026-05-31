@@ -275,7 +275,7 @@ function UI:AddSlider(section, labelText, current, max, callback)
 end
 
 function UI:AddDropdown(section, labelText, defaultSelected, optionsList, callback)
-    section.OrderIndex = section.OrderIndex + 2
+    section.OrderIndex = (section.OrderIndex or 0) + 2
     local cb = callback or function() end
 
     local lbl = Instance.new("TextLabel")
@@ -284,28 +284,53 @@ function UI:AddDropdown(section, labelText, defaultSelected, optionsList, callba
     lbl.Text = labelText
     lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
     lbl.Font = Enum.Font.Arcade
-    lbl.TextSize = 10 
+    lbl.TextSize = 10
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.LayoutOrder = section.OrderIndex
-    lbl.Parent = section.Left and section.Left or section
+    lbl.Parent = section
 
-    local box = Instance.new("Frame")
-    box.Size = UDim2.new(1, 0, 0, 15)
-    box.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
-    box.BorderColor3 = Color3.fromRGB(32, 32, 35)
-    box.LayoutOrder = section.OrderIndex + 1
-    box.Parent = lbl.Parent
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, 0, 0, 18)
+    button.BackgroundColor3 = Color3.fromRGB(12,12,14)
+    button.BorderColor3 = Color3.fromRGB(32,32,35)
+    button.Text = defaultSelected or "Select..."
+    button.TextColor3 = Color3.fromRGB(180,180,185)
+    button.Font = Enum.Font.Arcade
+    button.TextSize = 9
+    button.LayoutOrder = section.OrderIndex + 1
+    button.Parent = section
 
-    local txt = Instance.new("TextLabel")
-    txt.Size = UDim2.new(1, -6, 1, 0)
-    txt.Position = UDim2.new(0, 4, 0, 0)
-    txt.BackgroundTransparency = 1
-    txt.Text = defaultSelected
-    txt.TextColor3 = Color3.fromRGB(140, 140, 145)
-    txt.Font = Enum.Font.Arcade
-    txt.TextSize = 9 
-    txt.TextXAlignment = Enum.TextXAlignment.Left
-    txt.Parent = box
+    local listFrame = Instance.new("Frame")
+    listFrame.Size = UDim2.new(1, 0, 0, #optionsList * 18)
+    listFrame.BackgroundColor3 = Color3.fromRGB(12,12,14)
+    listFrame.BorderColor3 = Color3.fromRGB(32,32,35)
+    listFrame.Visible = false
+    listFrame.LayoutOrder = section.OrderIndex + 2
+    listFrame.Parent = section
+
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = listFrame
+
+    for _, option in ipairs(optionsList) do
+        local opt = Instance.new("TextButton")
+        opt.Size = UDim2.new(1, 0, 0, 18)
+        opt.BackgroundTransparency = 1
+        opt.Text = option
+        opt.TextColor3 = Color3.fromRGB(180,180,185)
+        opt.Font = Enum.Font.Arcade
+        opt.TextSize = 9
+        opt.Parent = listFrame
+
+        opt.MouseButton1Click:Connect(function()
+            button.Text = option
+            listFrame.Visible = false
+            cb(option)
+        end)
+    end
+
+    button.MouseButton1Click:Connect(function()
+        listFrame.Visible = not listFrame.Visible
+    end)
 end
 
 -- ====================================================
