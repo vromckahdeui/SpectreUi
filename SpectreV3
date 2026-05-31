@@ -7,7 +7,7 @@ if CoreGui:FindFirstChild("SpectreUi") then
 end
 
 local AbyssUI = Instance.new("ScreenGui")
-AbyssUI.Name = "SpectreUi" -- Renamed UI Container
+AbyssUI.Name = "SpectreV3"
 AbyssUI.Parent = CoreGui
 
 -- UNIVERSAL SCALER (Locked at 0.78 for the menu frame)
@@ -93,7 +93,7 @@ function UI:CreateTab(tabName)
     tabBtn.BackgroundColor3 = isFirst and Color3.fromRGB(24, 24, 28) or Color3.fromRGB(16, 16, 18)
     tabBtn.BorderColor3 = Color3.fromRGB(35, 35, 38)
     tabBtn.Text = tabName
-    tabBtn.TextColor3 = isFirst Image of text inside UI element.and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(140, 140, 145)
+    tabBtn.TextColor3 = isFirst and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(140, 140, 145)
     tabBtn.Font = Enum.Font.Arcade
     tabBtn.TextSize = 10 
     tabBtn.LayoutOrder = UI.TabCount
@@ -255,7 +255,7 @@ function UI:AddSlider(section, labelText, current, max, callback)
 
     local activeSliding = false
     track.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             activeSliding = true
             UpdateSlider(input)
         end
@@ -387,3 +387,6 @@ UserInputService.InputChanged:Connect(function(input)
         MenuFrame.Size = UDim2.new(0, clampedWidth, 0, clampedHeight)
     end
 end)
+
+-- Return the framework object to loadstring listeners
+return UI
