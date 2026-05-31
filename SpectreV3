@@ -1,212 +1,49 @@
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 
--- Clean up old instances of SpectreUi
-if CoreGui:FindFirstChild("SpectreUi") then
-    CoreGui.SpectreUi:Destroy()
-end
+if CoreGui:FindFirstChild("SpectreV3") then CoreGui.SpectreV3:Destroy() end
 
-local AbyssUI = Instance.new("ScreenGui")
+local AbyssUI = Instance.new("ScreenGui", CoreGui)
 AbyssUI.Name = "SpectreV3"
-AbyssUI.Parent = CoreGui
 
--- UNIVERSAL SCALER (Locked at 0.78 for the menu frame)
-local MasterScale = Instance.new("UIScale")
-MasterScale.Scale = 0.78
+local UI = { TabCount = 0 }
+local MenuFrame = Instance.new("Frame", AbyssUI)
+MenuFrame.Size = UDim2.new(0, 440, 0, 340); MenuFrame.Position = UDim2.new(0.5, 0, 0.5, 0); MenuFrame.AnchorPoint = Vector2.new(0.5, 0.5); MenuFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 22); MenuFrame.Active = true
 
--- ====================================================
--- FLOATING TOGGLE INTERFACE
--- ====================================================
-local FloatingToggle = Instance.new("TextButton")
-FloatingToggle.Size = UDim2.new(0, 85, 0, 24)
-FloatingToggle.Position = UDim2.new(0, 15, 0, 15)
-FloatingToggle.BackgroundColor3 = Color3.fromRGB(20, 20, 22)
-FloatingToggle.BorderColor3 = Color3.fromRGB(45, 45, 48)
-FloatingToggle.BorderSizePixel = 1
-FloatingToggle.Text = "[x] TOGGLE"
-FloatingToggle.TextColor3 = Color3.fromRGB(240, 240, 240)
-FloatingToggle.Font = Enum.Font.Arcade
-FloatingToggle.TextSize = 12
-FloatingToggle.Parent = AbyssUI
-
-local ToggleScale = Instance.new("UIScale")
-ToggleScale.Scale = 1.0 
-ToggleScale.Parent = FloatingToggle
-
--- ====================================================
--- MAIN MODULE WINDOW FRAME 
--- ====================================================
-local MenuFrame = Instance.new("Frame")
-MenuFrame.Size = UDim2.new(0, 440, 0, 340) 
-MenuFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-MenuFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-MenuFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 22)
-MenuFrame.BorderColor3 = Color3.fromRGB(45, 45, 48)
-MenuFrame.BorderSizePixel = 1
-MenuFrame.Active = true
-MenuFrame.ClipsDescendants = false
-MenuFrame.Parent = AbyssUI
-
-local WindowScale = MasterScale:Clone()
-WindowScale.Parent = MenuFrame
-
--- Tab Navigation Row
-local TabsHeader = Instance.new("Frame")
-TabsHeader.Size = UDim2.new(1, -16, 0, 18)
-TabsHeader.Position = UDim2.new(0, 8, 0, 8)
-TabsHeader.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
-TabsHeader.BorderColor3 = Color3.fromRGB(35, 35, 38)
-TabsHeader.BorderSizePixel = 1
-TabsHeader.Parent = MenuFrame
-
-local TabsLayout = Instance.new("UIListLayout")
-TabsLayout.FillDirection = Enum.FillDirection.Horizontal
-TabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-TabsLayout.Padding = UDim.new(0, 1)
-TabsLayout.Parent = TabsHeader
-
--- Content Boundary Container
-local ContentContainer = Instance.new("Frame")
-ContentContainer.Size = UDim2.new(1, -16, 1, -40)
-ContentContainer.Position = UDim2.new(0, 8, 0, 32)
-ContentContainer.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
-ContentContainer.BorderColor3 = Color3.fromRGB(32, 32, 35)
-ContentContainer.BorderSizePixel = 1
-ContentContainer.Parent = MenuFrame
-
--- ====================================================
--- REPOS-READY MODULAR FRAMEWORK OBJECT
--- ====================================================
-local UI = {
-    Tabs = {},
-    ActiveTab = nil,
-    TabCount = 0
-}
+local TabsHeader = Instance.new("Frame", MenuFrame); TabsHeader.Size = UDim2.new(1, -16, 0, 18); TabsHeader.Position = UDim2.new(0, 8, 0, 8); TabsHeader.BackgroundTransparency = 1
+local ContentContainer = Instance.new("Frame", MenuFrame); ContentContainer.Size = UDim2.new(1, -16, 1, -40); ContentContainer.Position = UDim2.new(0, 8, 0, 32); ContentContainer.BackgroundTransparency = 1
 
 function UI:CreateTab(tabName)
-    UI.TabCount = UI.TabCount + 1
+    UI.TabCount += 1
     local isFirst = (UI.TabCount == 1)
-
-    local tabBtn = Instance.new("TextButton")
-    tabBtn.Size = UDim2.new(0, 60, 1, 0)
-    tabBtn.BackgroundColor3 = isFirst and Color3.fromRGB(24, 24, 28) or Color3.fromRGB(16, 16, 18)
-    tabBtn.BorderColor3 = Color3.fromRGB(35, 35, 38)
-    tabBtn.Text = tabName
-    tabBtn.TextColor3 = isFirst and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(140, 140, 145)
-    tabBtn.Font = Enum.Font.Arcade
-    tabBtn.TextSize = 10 
-    tabBtn.LayoutOrder = UI.TabCount
-    tabBtn.Parent = TabsHeader
-
-    local viewFrame = Instance.new("Frame")
-    viewFrame.Size = UDim2.new(1, 0, 1, 0)
-    viewFrame.BackgroundTransparency = 1
-    viewFrame.Visible = isFirst
-    viewFrame.Parent = ContentContainer
-
+    local tabBtn = Instance.new("TextButton", TabsHeader); tabBtn.Size = UDim2.new(0, 60, 1, 0); tabBtn.BackgroundColor3 = isFirst and Color3.fromRGB(24, 24, 28) or Color3.fromRGB(16, 16, 18); tabBtn.Text = tabName; tabBtn.Font = Enum.Font.Arcade; tabBtn.TextSize = 10
+    local viewFrame = Instance.new("Frame", ContentContainer); viewFrame.Size = UDim2.new(1, 0, 1, 0); viewFrame.BackgroundTransparency = 1; viewFrame.Visible = isFirst
+    
     local function CreateSection(pos)
-        local box = Instance.new("Frame")
-        box.Size = UDim2.new(0.5, -9, 1, -12)
-        box.Position = pos
-        box.BackgroundColor3 = Color3.fromRGB(17, 17, 19)
-        box.BorderColor3 = Color3.fromRGB(32, 32, 35)
-        box.BorderSizePixel = 1
-        box.Parent = viewFrame
-
-        local list = Instance.new("UIListLayout")
-        list.Padding = UDim.new(0, 5)
-        list.SortOrder = Enum.SortOrder.LayoutOrder
-        list.Parent = box
-
-        local pad = Instance.new("UIPadding")
-        pad.PaddingTop = UDim.new(0, 8)
-        pad.PaddingLeft = UDim.new(0, 8)
-        pad.PaddingRight = UDim.new(0, 8)
-        pad.Parent = box
-
+        local box = Instance.new("Frame", viewFrame); box.Size = UDim2.new(0.5, -9, 1, -12); box.Position = pos; box.BackgroundColor3 = Color3.fromRGB(17, 17, 19)
+        Instance.new("UIListLayout", box).Padding = UDim.new(0, 5)
+        Instance.new("UIPadding", box).PaddingTop = UDim.new(0, 8); Instance.new("UIPadding", box).PaddingLeft = UDim.new(0, 8); Instance.new("UIPadding", box).PaddingRight = UDim.new(0, 8)
         return box
     end
-
-    local leftSection = CreateSection(UDim2.new(0, 6, 0, 6))
-    local rightSection = CreateSection(UDim2.new(0.5, 3, 0, 6))
-
-    local tabObj = { Left = leftSection, Right = rightSection, Button = tabBtn, Frame = viewFrame, OrderIndex = 1 }
-
-    if isFirst then UI.ActiveTab = tabObj end
-
-    tabBtn.MouseButton1Click:Connect(function()
-        if UI.ActiveTab then
-            UI.ActiveTab.Button.BackgroundColor3 = Color3.fromRGB(16, 16, 18)
-            UI.ActiveTab.Button.TextColor3 = Color3.fromRGB(140, 140, 145)
-            UI.ActiveTab.Frame.Visible = false
-        end
-        tabBtn.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
-        tabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        viewFrame.Visible = true
-        UI.ActiveTab = tabObj
-    end)
+    
+    local tabObj = { Left = CreateSection(UDim2.new(0, 6, 0, 6)), Right = CreateSection(UDim2.new(0.5, 3, 0, 6)) }
+    tabBtn.MouseButton1Click:Connect(function() for _, v in pairs(ContentContainer:GetChildren()) do v.Visible = false end; viewFrame.Visible = true end)
     return tabObj
 end
 
-function UI:AddToggle(section, labelText, defaultState, callback)
-    section.OrderIndex = section.OrderIndex + 2
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 13)
-    btn.BackgroundTransparency = 1
-    btn.Text = "   " .. labelText
-    btn.TextColor3 = defaultState and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(130, 130, 135)
-    btn.Font = Enum.Font.Arcade
-    btn.TextSize = 10 
-    btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.LayoutOrder = section.OrderIndex
-    btn.Parent = section.Left and section.Left or section
-
-    local check = Instance.new("Frame", btn)
-    check.Size = UDim2.new(0, 7, 0, 7)
-    check.Position = UDim2.new(0, 0, 0.5, -4)
-    check.BackgroundColor3 = defaultState and Color3.fromRGB(48, 110, 160) or Color3.fromRGB(28, 28, 32)
-    
-    local active = defaultState
-    btn.MouseButton1Click:Connect(function()
-        active = not active
-        check.BackgroundColor3 = active and Color3.fromRGB(48, 110, 160) or Color3.fromRGB(28, 28, 32)
-        btn.TextColor3 = active and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(130, 130, 135)
-        pcall(callback, active)
-    end)
-end
-
 function UI:AddDropdown(section, labelText, defaultSelected, optionsList, callback)
-    section.OrderIndex = section.OrderIndex + 2
-    local lbl = Instance.new("TextLabel", section.Left or section)
-    lbl.Size = UDim2.new(1, 0, 0, 11); lbl.BackgroundTransparency = 1; lbl.Text = labelText
-    lbl.TextColor3 = Color3.fromRGB(200, 200, 200); lbl.Font = Enum.Font.Arcade; lbl.TextSize = 10; lbl.TextXAlignment = 0; lbl.LayoutOrder = section.OrderIndex
-
-    local box = Instance.new("TextButton", lbl)
-    box.Size = UDim2.new(1, 0, 0, 15); box.BackgroundColor3 = Color3.fromRGB(12, 12, 14); box.BorderColor3 = Color3.fromRGB(32, 32, 35); box.LayoutOrder = section.OrderIndex + 1; box.Text = ""
-
-    local txt = Instance.new("TextLabel", box)
-    txt.Size = UDim2.new(1, -6, 1, 0); txt.Position = UDim2.new(0, 4, 0, 0); txt.BackgroundTransparency = 1; txt.Text = defaultSelected
-    txt.TextColor3 = Color3.fromRGB(140, 140, 145); txt.Font = Enum.Font.Arcade; txt.TextSize = 9; txt.TextXAlignment = 0
-
+    local lbl = Instance.new("TextLabel", section); lbl.Size = UDim2.new(1, 0, 0, 11); lbl.BackgroundTransparency = 1; lbl.Text = labelText; lbl.TextColor3 = Color3.fromRGB(200, 200, 200); lbl.Font = Enum.Font.Arcade; lbl.TextSize = 10; lbl.TextXAlignment = 0
+    local box = Instance.new("TextButton", section); box.Size = UDim2.new(1, 0, 0, 15); box.BackgroundColor3 = Color3.fromRGB(12, 12, 14); box.Text = defaultSelected; box.TextColor3 = Color3.fromRGB(140, 140, 145); box.Font = Enum.Font.Arcade; box.TextSize = 9
+    
     box.MouseButton1Click:Connect(function()
         if box:FindFirstChild("List") then box.List:Destroy() return end
-        local list = Instance.new("ScrollingFrame", box)
-        list.Name = "List"; list.Size = UDim2.new(1, 0, 0, math.min(#optionsList * 17, 100)); list.Position = UDim2.new(0, 0, 1, 2)
-        list.BackgroundColor3 = Color3.fromRGB(20, 20, 22); list.BorderColor3 = Color3.fromRGB(45, 45, 48); list.ScrollBarThickness = 2; list.ZIndex = 10
+        local list = Instance.new("ScrollingFrame", box); list.Name = "List"; list.Size = UDim2.new(1, 0, 0, math.min(#optionsList * 17, 100)); list.Position = UDim2.new(0, 0, 0, -2); list.AnchorPoint = Vector2.new(0, 1); list.BackgroundColor3 = Color3.fromRGB(20, 20, 22); list.ZIndex = 20
         Instance.new("UIListLayout", list)
         for _, v in ipairs(optionsList) do
-            local item = Instance.new("TextButton", list)
-            item.Size = UDim2.new(1, 0, 0, 17); item.Text = v; item.TextColor3 = Color3.fromRGB(200, 200, 200); item.Font = Enum.Font.Arcade; item.TextSize = 9; item.ZIndex = 11
-            item.MouseButton1Click:Connect(function() txt.Text = v; pcall(callback, v); list:Destroy() end)
+            local item = Instance.new("TextButton", list); item.Size = UDim2.new(1, 0, 0, 17); item.Text = v; item.TextColor3 = Color3.fromRGB(200, 200, 200); item.Font = Enum.Font.Arcade; item.TextSize = 9; item.ZIndex = 21
+            item.MouseButton1Click:Connect(function() box.Text = v; pcall(callback, v); list:Destroy() end)
         end
     end)
 end
-
--- RESIZER / DRAG / ETC REMAIN UNCHANGED
-local ResizeHandle = Instance.new("TextButton", MenuFrame)
-ResizeHandle.Size = UDim2.new(0, 10, 0, 10); ResizeHandle.Position = UDim2.new(1, -10, 1, -10); ResizeHandle.BackgroundColor3 = Color3.fromRGB(35, 35, 38); ResizeHandle.BorderColor3 = Color3.fromRGB(55, 55, 60); ResizeHandle.BorderSizePixel = 1; ResizeHandle.Text = ""; ResizeHandle.AutoButtonColor = false; ResizeHandle.ZIndex = 5
-
-FloatingToggle.MouseButton1Click:Connect(function() MenuFrame.Visible = not MenuFrame.Visible end)
--- (Dragging/Resizing logic omitted for space, but exists in your original)
 
 return UI
