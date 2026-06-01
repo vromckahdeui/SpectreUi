@@ -73,7 +73,7 @@ ContentContainer.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
 ContentContainer.BorderSizePixel = 0
 ContentContainer.Parent = DarkTrimBorder
 
--- Thin Inner Lining Setup (Adjusted a little farther out to 5px margin spacing)
+-- Thin Inner Lining Setup (Pushed outward to a clean 5px border cushion)
 local InnerLining = Instance.new("Frame")
 InnerLining.Name = "InnerLining"
 InnerLining.Size = UDim2.new(1, -10, 1, -10)
@@ -197,14 +197,14 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Window Resize Handle Setup
+-- Window Resize Drag Handle
 local ResizeScaler = Instance.new("ImageButton")
 ResizeScaler.Name = "ResizeScaler"
 ResizeScaler.Parent = MainFrame
 ResizeScaler.Size = UDim2.new(0, 14, 0, 14)
 ResizeScaler.Position = UDim2.new(1, -14, 1, -14)
 ResizeScaler.BackgroundTransparency = 1
-ResizeScaler.Image = "" -- Transparent hotzone target
+ResizeScaler.Image = "" 
 ResizeScaler.ZIndex = 10
 
 local resizing, resizeStart, startSize
@@ -475,4 +475,5 @@ function Library:CreateTab(title, side)
     return Elements
 end
 
--- =================================
+-- IMPORTANT: Return the Library table for your loadstring script to capture it
+return Library
