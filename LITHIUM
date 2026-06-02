@@ -280,6 +280,14 @@ function Library:CreateTab(tabName)
     end
     LeftLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(ResizeCanvas)
     RightLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(ResizeCanvas)
+    
+    -- Dynamic Realtime Scale Adjustment Hook
+    PagesContainer:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        LeftColumn.Size = UDim2.new(0.5, -6, 1, 0)
+        RightColumn.Size = UDim2.new(0.5, -6, 1, 0)
+        RightColumn.Position = UDim2.new(0.5, 6, 0, 0)
+        ResizeCanvas()
+    end)
 
     -- Create Top Horizontal Selection Button with Automatic Sizing Fix
     local TabButton = Instance.new("TextButton")
