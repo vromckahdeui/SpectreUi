@@ -1,2 +1,2 @@
 # SpectreUi
-Ai made ui
+ai made ui 
