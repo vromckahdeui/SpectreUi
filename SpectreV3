@@ -86,7 +86,7 @@ local UI = {
 function UI:CreateTab(tabName)
     UI.TabCount = UI.TabCount + 1
     local isFirst = (UI.TabCount == 1)
-    
+
     local tabBtn = Instance.new("TextButton")
     tabBtn.Size = UDim2.new(0, 60, 1, 0)
     tabBtn.BackgroundColor3 = isFirst and Color3.fromRGB(24, 24, 28) or Color3.fromRGB(16, 16, 18)
@@ -130,7 +130,11 @@ function UI:CreateTab(tabName)
     local leftSection = CreateSection(UDim2.new(0, 6, 0, 6))
     local rightSection = CreateSection(UDim2.new(0.5, 3, 0, 6))
 
-    local tabObj = { Left = leftSection, Right = rightSection, Button = tabBtn, Frame = viewFrame, OrderIndex = 1 }
+    -- Initialized OrderIndex properties to handle internal UIListLayout sequence
+    leftSection:SetAttribute("OrderIndex", 1)
+    rightSection:SetAttribute("OrderIndex", 1)
+
+    local tabObj = { Left = leftSection, Right = rightSection, Button = tabBtn, Frame = viewFrame }
 
     if isFirst then UI.ActiveTab = tabObj end
 
@@ -154,7 +158,9 @@ end
 -- ====================================================
 
 function UI:AddToggle(section, labelText, defaultState, callback)
-    section.OrderIndex = section.OrderIndex + 2
+    local currentIndex = section:GetAttribute("OrderIndex") or 1
+    section:SetAttribute("OrderIndex", currentIndex + 2)
+
     local cb = callback or function() end
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(1, 0, 0, 11)
@@ -164,7 +170,7 @@ function UI:AddToggle(section, labelText, defaultState, callback)
     lbl.Font = Enum.Font.Arcade
     lbl.TextSize = 10 
     lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.LayoutOrder = section.OrderIndex
+    lbl.LayoutOrder = currentIndex
     lbl.Parent = section
 
     local btn = Instance.new("TextButton")
@@ -175,7 +181,7 @@ function UI:AddToggle(section, labelText, defaultState, callback)
     btn.Font = Enum.Font.Arcade
     btn.TextSize = 10 
     btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.LayoutOrder = section.OrderIndex + 1
+    btn.LayoutOrder = currentIndex + 1
     btn.Parent = lbl.Parent
 
     local check = Instance.new("Frame")
@@ -195,7 +201,9 @@ function UI:AddToggle(section, labelText, defaultState, callback)
 end
 
 function UI:AddSlider(section, labelText, current, max, callback)
-    section.OrderIndex = section.OrderIndex + 2
+    local currentIndex = section:GetAttribute("OrderIndex") or 1
+    section:SetAttribute("OrderIndex", currentIndex + 2)
+
     local cb = callback or function() end
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(1, 0, 0, 11)
@@ -205,14 +213,14 @@ function UI:AddSlider(section, labelText, current, max, callback)
     lbl.Font = Enum.Font.Arcade
     lbl.TextSize = 10 
     lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.LayoutOrder = section.OrderIndex
+    lbl.LayoutOrder = currentIndex
     lbl.Parent = section
 
     local track = Instance.new("Frame")
     track.Size = UDim2.new(1, 0, 0, 9)
     track.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
     track.BorderColor3 = Color3.fromRGB(32, 32, 35)
-    track.LayoutOrder = section.OrderIndex + 1
+    track.LayoutOrder = currentIndex + 1
     track.Parent = lbl.Parent
 
     local fill = Instance.new("Frame")
@@ -261,6 +269,9 @@ function UI:AddSlider(section, labelText, current, max, callback)
 end
 
 function UI:AddDropdown(section, labelText, defaultSelected, optionsList, callback)
+    local currentIndex = section:GetAttribute("OrderIndex") or 1
+    section:SetAttribute("OrderIndex", currentIndex + 2)
+
     local cb = callback or function() end
 
     local lbl = Instance.new("TextLabel")
@@ -271,6 +282,7 @@ function UI:AddDropdown(section, labelText, defaultSelected, optionsList, callba
     lbl.Font = Enum.Font.Arcade
     lbl.TextSize = 10
     lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.LayoutOrder = currentIndex
     lbl.Parent = section
 
     local button = Instance.new("TextButton")
@@ -281,6 +293,7 @@ function UI:AddDropdown(section, labelText, defaultSelected, optionsList, callba
     button.TextColor3 = Color3.fromRGB(140, 140, 145)
     button.Font = Enum.Font.Arcade
     button.TextSize = 9
+    button.LayoutOrder = currentIndex + 1
     button.Parent = section
 
     local dropdownFrame = Instance.new("Frame")
@@ -288,6 +301,7 @@ function UI:AddDropdown(section, labelText, defaultSelected, optionsList, callba
     dropdownFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
     dropdownFrame.BorderColor3 = Color3.fromRGB(32, 32, 35)
     dropdownFrame.Visible = false
+    dropdownFrame.LayoutOrder = currentIndex + 2
     dropdownFrame.Parent = section
 
     local layout = Instance.new("UIListLayout")
