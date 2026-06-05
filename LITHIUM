@@ -280,8 +280,7 @@ function Library:CreateTab(tabName)
     end
     LeftLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(ResizeCanvas)
     RightLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(ResizeCanvas)
-    
-    -- Dynamic Realtime Scale Adjustment Hook
+
     PagesContainer:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
         LeftColumn.Size = UDim2.new(0.5, -6, 1, 0)
         RightColumn.Size = UDim2.new(0.5, -6, 1, 0)
@@ -289,7 +288,6 @@ function Library:CreateTab(tabName)
         ResizeCanvas()
     end)
 
-    -- Create Top Horizontal Selection Button with Automatic Sizing Fix
     local TabButton = Instance.new("TextButton")
     TabButton.Name = tabName .. "Btn"
     TabButton.Parent = TabHeaderFrame
@@ -308,7 +306,6 @@ function Library:CreateTab(tabName)
     TabButtonPadding.PaddingRight = UDim.new(0, 12)
     TabButtonPadding.Parent = TabButton
 
-    -- Horizontal Bottom Accent Active Line Indicator
     local TabIndicator = Instance.new("Frame")
     TabIndicator.Size = UDim2.new(1, 0, 0, 2)
     TabIndicator.Position = UDim2.new(0, 0, 1, -2)
@@ -331,12 +328,11 @@ function Library:CreateTab(tabName)
 
     if firstTab then firstTab = false end
 
-    -- Tab Object Content Elements Engine
     local TabElements = {}
 
     function TabElements:CreateGroupbox(title, side)
         local targetColumn = (side == 2) and RightColumn or LeftColumn
-        
+
         local BoxFrame = Instance.new("Frame")
         BoxFrame.Name = title .. "Groupbox"
         BoxFrame.Parent = targetColumn
@@ -381,155 +377,171 @@ function Library:CreateTab(tabName)
             BoxFrame.Size = UDim2.new(1, 0, 0, BoxList.AbsoluteContentSize.Y + 20)
         end)
 
+        -- Initialized internal attribute engine for linear rendering list sequences
+        BoxFrame:SetAttribute("OrderIndex", 1)
+
         local Elements = {}
 
-        function Elements:CreateToggle(name, default, callback)
-            local state = default or false
-            local Row = Instance.new("Frame")
-            Row.Parent = BoxFrame
-            Row.BackgroundTransparency = 1
-            Row.Size = UDim2.new(1, 0, 0, 14)
-            Row.ZIndex = 2
+        -- ====================================================
+        -- SPECTRE-DRIVEN RUNTIME COMPONENT CONSTRUCTORS
+        -- ====================================================
 
-            local BoxBtn = Instance.new("TextButton")
-            BoxBtn.Parent = Row
-            BoxBtn.Size = UDim2.new(0, 10, 0, 10)
-            BoxBtn.Position = UDim2.new(0, 0, 0.5, -5)
-            BoxBtn.BackgroundColor3 = state and Color3.fromRGB(130, 85, 230) or Color3.fromRGB(20, 20, 25)
-            BoxBtn.BorderColor3 = Color3.fromRGB(45, 45, 52)
-            BoxBtn.Text = ""
-            BoxBtn.ZIndex = 2
+        function Elements:AddToggle(labelText, defaultState, callback)
+            local currentIndex = BoxFrame:GetAttribute("OrderIndex") or 1
+            BoxFrame:SetAttribute("OrderIndex", currentIndex + 2)
 
-            local Label = Instance.new("TextLabel")
-            Label.Parent = Row
-            Label.BackgroundTransparency = 1
-            Label.Position = UDim2.new(0, 16, 0, 0)
-            Label.Size = UDim2.new(1, -40, 1, 0)
-            Label.Font = Enum.Font.Arcade
-            Label.Text = name
-            Label.TextColor3 = state and Color3.fromRGB(240, 240, 245) or Color3.fromRGB(150, 150, 155)
-            Label.TextSize = 10
-            Label.TextXAlignment = Enum.TextXAlignment.Left
-            Label.ZIndex = 2
+            local cb = callback or function() end
+            local lbl = Instance.new("TextLabel")
+            lbl.Size = UDim2.new(1, 0, 0, 11)
+            lbl.BackgroundTransparency = 1
+            lbl.Text = labelText
+            lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+            lbl.Font = Enum.Font.Arcade
+            lbl.TextSize = 10 
+            lbl.TextXAlignment = Enum.TextXAlignment.Left
+            lbl.LayoutOrder = currentIndex
+            lbl.ZIndex = 2
+            lbl.Parent = BoxFrame
 
-            local StatusLabel = Instance.new("TextLabel")
-            StatusLabel.Parent = Row
-            StatusLabel.BackgroundTransparency = 1
-            StatusLabel.Position = UDim2.new(1, -24, 0, 0)
-            StatusLabel.Size = UDim2.new(0, 24, 1, 0)
-            StatusLabel.Font = Enum.Font.Arcade
-            StatusLabel.Text = state and "[ON]" or "[OFF]"
-            StatusLabel.TextColor3 = state and Color3.fromRGB(130, 85, 230) or Color3.fromRGB(80, 80, 85)
-            StatusLabel.TextSize = 9
-            StatusLabel.TextXAlignment = Enum.TextXAlignment.Right
-            StatusLabel.ZIndex = 2
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, 0, 0, 13)
+            btn.BackgroundTransparency = 1
+            btn.Text = "   Enabled"
+            btn.TextColor3 = defaultState and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(130, 130, 135)
+            btn.Font = Enum.Font.Arcade
+            btn.TextSize = 10 
+            btn.TextXAlignment = Enum.TextXAlignment.Left
+            btn.LayoutOrder = currentIndex + 1
+            btn.ZIndex = 2
+            btn.Parent = BoxFrame
 
-            local function update()
-                BoxBtn.BackgroundColor3 = state and Color3.fromRGB(130, 85, 230) or Color3.fromRGB(20, 20, 25)
-                Label.TextColor3 = state and Color3.fromRGB(240, 240, 245) or Color3.fromRGB(150, 150, 155)
-                StatusLabel.Text = state and "[ON]" or "[OFF]"
-                StatusLabel.TextColor3 = state and Color3.fromRGB(130, 85, 230) or Color3.fromRGB(80, 80, 85)
-                callback(state)
-            end
-            BoxBtn.MouseButton1Click:Connect(function() state = not state update() end)
+            local check = Instance.new("Frame")
+            check.Size = UDim2.new(0, 7, 0, 7)
+            check.Position = UDim2.new(0, 0, 0.5, -4)
+            check.BackgroundColor3 = defaultState and Color3.fromRGB(130, 85, 230) or Color3.fromRGB(28, 28, 32)
+            check.BorderColor3 = Color3.fromRGB(50, 50, 55)
+            check.ZIndex = 2
+            check.Parent = btn
+
+            local active = defaultState
+            btn.MouseButton1Click:Connect(function()
+                active = not active
+                check.BackgroundColor3 = active and Color3.fromRGB(130, 85, 230) or Color3.fromRGB(28, 28, 32)
+                btn.TextColor3 = active and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(130, 130, 135)
+                pcall(cb, active)
+            end)
         end
 
-        function Elements:CreateSlider(name, min, max, default, symbol, callback)
-            local value = default or min
-            local sym = symbol or ""
-            local Row = Instance.new("Frame")
-            Row.Parent = BoxFrame
-            Row.BackgroundTransparency = 1
-            Row.Size = UDim2.new(1, 0, 0, 24)
-            Row.ZIndex = 2
+        function Elements:AddSlider(labelText, current, max, callback)
+            local currentIndex = BoxFrame:GetAttribute("OrderIndex") or 1
+            BoxFrame:SetAttribute("OrderIndex", currentIndex + 2)
 
-            local Label = Instance.new("TextLabel")
-            Label.Parent = Row
-            Label.BackgroundTransparency = 1
-            Label.Size = UDim2.new(1, 0, 0, 12)
-            Label.Font = Enum.Font.Arcade
-            Label.Text = name .. " -> " .. tostring(value) .. sym
-            Label.TextColor3 = Color3.fromRGB(150, 150, 155)
-            Label.TextSize = 10
-            Label.TextXAlignment = Enum.TextXAlignment.Left
-            Label.ZIndex = 2
+            local cb = callback or function() end
+            local lbl = Instance.new("TextLabel")
+            lbl.Size = UDim2.new(1, 0, 0, 11)
+            lbl.BackgroundTransparency = 1
+            lbl.Text = labelText
+            lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+            lbl.Font = Enum.Font.Arcade
+            lbl.TextSize = 10 
+            lbl.TextXAlignment = Enum.TextXAlignment.Left
+            lbl.LayoutOrder = currentIndex
+            lbl.ZIndex = 2
+            lbl.Parent = BoxFrame
 
-            local SliderTrack = Instance.new("Frame")
-            SliderTrack.Parent = Row
-            SliderTrack.Position = UDim2.new(0, 0, 0, 14)
-            SliderTrack.Size = UDim2.new(1, 0, 0, 5)
-            SliderTrack.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-            SliderTrack.BorderColor3 = Color3.fromRGB(38, 38, 45)
-            SliderTrack.ZIndex = 2
+            local track = Instance.new("Frame")
+            track.Size = UDim2.new(1, 0, 0, 9)
+            track.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
+            track.BorderColor3 = Color3.fromRGB(32, 32, 35)
+            track.LayoutOrder = currentIndex + 1
+            track.ZIndex = 2
+            track.Parent = BoxFrame
 
-            local SliderFill = Instance.new("Frame")
-            SliderFill.Parent = SliderTrack
-            SliderFill.Size = UDim2.new((value - min)/(max - min), 0, 1, 0)
-            SliderFill.BackgroundColor3 = Color3.fromRGB(130, 85, 230)
-            SliderFill.BorderSizePixel = 0
-            SliderFill.ZIndex = 2
+            local fill = Instance.new("Frame")
+            fill.Size = UDim2.new(current/max, 0, 1, 0)
+            fill.BackgroundColor3 = Color3.fromRGB(130, 85, 230)
+            fill.BorderSizePixel = 0
+            fill.ZIndex = 2
+            fill.Parent = track
 
-            local function updateSlider(input)
-                local scale = math.clamp((input.Position.X - SliderTrack.AbsolutePosition.X) / SliderTrack.AbsoluteSize.X, 0, 1)
-                value = math.floor(min + (max - min) * scale)
-                Label.Text = name .. " -> " .. tostring(value) .. sym
-                SliderFill.Size = UDim2.new(scale, 0, 1, 0)
-                callback(value)
+            local val = Instance.new("TextLabel")
+            val.Size = UDim2.new(1, -4, 1, 0)
+            val.BackgroundTransparency = 1
+            val.Text = current .. "/" .. max
+            val.TextColor3 = Color3.fromRGB(150, 150, 155)
+            val.Font = Enum.Font.Arcade
+            val.TextSize = 9 
+            val.TextXAlignment = Enum.TextXAlignment.Right
+            val.ZIndex = 2
+            val.Parent = track
+
+            local function UpdateSlider(input)
+                local totalSize = track.AbsoluteSize.X
+                local relativeX = math.clamp(input.Position.X - track.AbsolutePosition.X, 0, totalSize)
+                local percentage = relativeX / totalSize
+                local value = math.round(percentage * max)
+                fill.Size = UDim2.new(percentage, 0, 1, 0)
+                val.Text = value .. "/" .. max
+                pcall(cb, value)
             end
 
-            local sliding = false
-            SliderTrack.InputBegan:Connect(function(input)
+            local activeSliding = false
+            track.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    sliding = true updateSlider(input)
+                    activeSliding = true
+                    UpdateSlider(input)
                 end
             end)
             UserInputService.InputChanged:Connect(function(input)
-                if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                    updateSlider(input)
+                if activeSliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                    UpdateSlider(input)
                 end
             end)
             UserInputService.InputEnded:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    sliding = false
+                      activeSliding = false
                 end
             end)
         end
 
         function Elements:AddDropdown(labelText, defaultSelected, optionsList, callback)
+            local currentIndex = BoxFrame:GetAttribute("OrderIndex") or 1
+            BoxFrame:SetAttribute("OrderIndex", currentIndex + 3)
+
             local cb = callback or function() end
 
             local lbl = Instance.new("TextLabel")
-            lbl.Size = UDim2.new(1, 0, 0, 12)
+            lbl.Size = UDim2.new(1, 0, 0, 11)
             lbl.BackgroundTransparency = 1
             lbl.Text = labelText
-            lbl.TextColor3 = Color3.fromRGB(150, 150, 155)
+            lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
             lbl.Font = Enum.Font.Arcade
             lbl.TextSize = 10
             lbl.TextXAlignment = Enum.TextXAlignment.Left
-            lbl.Parent = BoxFrame
+            lbl.LayoutOrder = currentIndex
             lbl.ZIndex = 2
+            lbl.Parent = BoxFrame
 
             local button = Instance.new("TextButton")
             button.Size = UDim2.new(1, 0, 0, 15)
-            button.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-            button.BorderColor3 = Color3.fromRGB(38, 38, 45)
-            button.Text = " " .. (defaultSelected or "Select")
-            button.TextColor3 = Color3.fromRGB(200, 200, 205)
+            button.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
+            button.BorderColor3 = Color3.fromRGB(32, 32, 35)
+            button.Text = defaultSelected or "Select"
+            button.TextColor3 = Color3.fromRGB(140, 140, 145)
             button.Font = Enum.Font.Arcade
-            button.TextSize = 10
-            button.TextXAlignment = Enum.TextXAlignment.Left
-            button.Active = true
-            button.Parent = BoxFrame
+            button.TextSize = 9
+            button.LayoutOrder = currentIndex + 1
             button.ZIndex = 2
+            button.Parent = BoxFrame
 
             local dropdownFrame = Instance.new("Frame")
             dropdownFrame.Size = UDim2.new(1, 0, 0, #optionsList * 15)
-            dropdownFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-            dropdownFrame.BorderColor3 = Color3.fromRGB(38, 38, 45)
+            dropdownFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
+            dropdownFrame.BorderColor3 = Color3.fromRGB(32, 32, 35)
             dropdownFrame.Visible = false
-            dropdownFrame.Active = true
-            dropdownFrame.Parent = BoxFrame
+            dropdownFrame.LayoutOrder = currentIndex + 2
             dropdownFrame.ZIndex = 3
+            dropdownFrame.Parent = BoxFrame
 
             local layout = Instance.new("UIListLayout")
             layout.Parent = dropdownFrame
@@ -538,17 +550,15 @@ function Library:CreateTab(tabName)
                 local optionBtn = Instance.new("TextButton")
                 optionBtn.Size = UDim2.new(1, 0, 0, 15)
                 optionBtn.BackgroundTransparency = 1
-                optionBtn.Text = "  " .. option
-                optionBtn.TextColor3 = Color3.fromRGB(150, 150, 155)
+                optionBtn.Text = option
+                optionBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
                 optionBtn.Font = Enum.Font.Arcade
                 optionBtn.TextSize = 9
-                optionBtn.TextXAlignment = Enum.TextXAlignment.Left
-                optionBtn.Active = true
-                optionBtn.Parent = dropdownFrame
                 optionBtn.ZIndex = 3
+                optionBtn.Parent = dropdownFrame
 
                 optionBtn.MouseButton1Click:Connect(function()
-                    button.Text = " " .. option
+                    button.Text = option
                     dropdownFrame.Visible = false
                     pcall(cb, option)
                     BoxFrame.Size = UDim2.new(1, 0, 0, BoxList.AbsoluteContentSize.Y + 20)
@@ -558,6 +568,107 @@ function Library:CreateTab(tabName)
             button.MouseButton1Click:Connect(function()
                 dropdownFrame.Visible = not dropdownFrame.Visible
                 BoxFrame.Size = UDim2.new(1, 0, 0, BoxList.AbsoluteContentSize.Y + 20)
+            end)
+        end
+
+        function Elements:AddColorPicker(labelText, defaultColor, callback)
+            local currentIndex = BoxFrame:GetAttribute("OrderIndex") or 1
+            BoxFrame:SetAttribute("OrderIndex", currentIndex + 2)
+
+            local cb = callback or function() end
+            
+            local pickerContainer = Instance.new("Frame")
+            pickerContainer.Size = UDim2.new(1, 0, 0, 15)
+            pickerContainer.BackgroundTransparency = 1
+            pickerContainer.LayoutOrder = currentIndex
+            pickerContainer.ZIndex = 2
+            pickerContainer.Parent = BoxFrame
+
+            local lbl = Instance.new("TextLabel")
+            lbl.Size = UDim2.new(1, -25, 1, 0)
+            lbl.BackgroundTransparency = 1
+            lbl.Text = labelText
+            lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+            lbl.Font = Enum.Font.Arcade
+            lbl.TextSize = 10
+            lbl.TextXAlignment = Enum.TextXAlignment.Left
+            lbl.ZIndex = 2
+            lbl.Parent = pickerContainer
+
+            local colorDisplay = Instance.new("TextButton")
+            colorDisplay.Size = UDim2.new(0, 20, 0, 11)
+            colorDisplay.Position = UDim2.new(1, -20, 0.5, -5)
+            colorDisplay.BackgroundColor3 = defaultColor or Color3.fromRGB(255, 255, 255)
+            colorDisplay.BorderColor3 = Color3.fromRGB(50, 50, 55)
+            colorDisplay.Text = ""
+            colorDisplay.ZIndex = 2
+            colorDisplay.Parent = pickerContainer
+
+            local spectrumFrame = Instance.new("Frame")
+            spectrumFrame.Size = UDim2.new(1, 0, 0, 12)
+            spectrumFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            spectrumFrame.BorderColor3 = Color3.fromRGB(32, 32, 35)
+            spectrumFrame.Visible = false
+            spectrumFrame.LayoutOrder = currentIndex + 1
+            spectrumFrame.ZIndex = 3
+            spectrumFrame.Parent = BoxFrame
+
+            local gradient = Instance.new("UIGradient")
+            gradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
+                ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
+                ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
+                ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 255)),
+                ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
+                ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
+                ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0))
+            })
+            gradient.Parent = spectrumFrame
+
+            colorDisplay.MouseButton1Click:Connect(function()
+                spectrumFrame.Visible = not spectrumFrame.Visible
+                BoxFrame.Size = UDim2.new(1, 0, 0, BoxList.AbsoluteContentSize.Y + 20)
+            end)
+
+            local function UpdateColor(input)
+                local totalSize = spectrumFrame.AbsoluteSize.X
+                local relativeX = math.clamp(input.Position.X - spectrumFrame.AbsolutePosition.X, 0, totalSize)
+                local percentage = relativeX / totalSize
+                
+                local colorKeys = gradient.Color.Keypoints
+                local leftKey, rightKey = colorKeys[1], colorKeys[#colorKeys]
+                
+                for i = 1, #colorKeys - 1 do
+                    if percentage >= colorKeys[i].Time and percentage <= colorKeys[i+1].Time then
+                        leftKey = colorKeys[i]
+                        rightKey = colorKeys[i+1]
+                        break
+                    end
+                end
+                
+                local ratio = (percentage - leftKey.Time) / (rightKey.Time - leftKey.Time)
+                local chosenColor = leftKey.Value:Lerp(rightKey.Value, ratio)
+                
+                colorDisplay.BackgroundColor3 = chosenColor
+                pcall(cb, chosenColor)
+            end
+
+            local activeSelecting = false
+            spectrumFrame.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    activeSelecting = true
+                    UpdateColor(input)
+                end
+            end)
+            UserInputService.InputChanged:Connect(function(input)
+                if activeSelecting and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                    UpdateColor(input)
+                end
+            end)
+            UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    activeSelecting = false
+                end
             end)
         end
 
