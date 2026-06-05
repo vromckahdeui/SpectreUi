@@ -1,4 +1,4 @@
-Local CoreGui = game:GetService("CoreGui")
+local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 
 -- Clean up old instances of SpectreUi
