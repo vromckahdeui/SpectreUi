@@ -1,4 +1,4 @@
-local CoreGui = game:GetService("CoreGui")
+Local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 
 -- Clean up old instances of SpectreUi
@@ -326,6 +326,103 @@ function UI:AddDropdown(section, labelText, defaultSelected, optionsList, callba
 
     button.MouseButton1Click:Connect(function()
         dropdownFrame.Visible = not dropdownFrame.Visible
+    end)
+end
+
+function UI:AddColorPicker(section, labelText, defaultColor, callback)
+    local currentIndex = section:GetAttribute("OrderIndex") or 1
+    section:SetAttribute("OrderIndex", currentIndex + 2)
+
+    local cb = callback or function() end
+    
+    local pickerContainer = Instance.new("Frame")
+    pickerContainer.Size = UDim2.new(1, 0, 0, 15)
+    pickerContainer.BackgroundTransparency = 1
+    pickerContainer.LayoutOrder = currentIndex
+    pickerContainer.Parent = section
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -25, 1, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = labelText
+    lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+    lbl.Font = Enum.Font.Arcade
+    lbl.TextSize = 10
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = pickerContainer
+
+    local colorDisplay = Instance.new("TextButton")
+    colorDisplay.Size = UDim2.new(0, 20, 0, 11)
+    colorDisplay.Position = UDim2.new(1, -20, 0.5, -5)
+    colorDisplay.BackgroundColor3 = defaultColor or Color3.fromRGB(255, 255, 255)
+    colorDisplay.BorderColor3 = Color3.fromRGB(50, 50, 55)
+    colorDisplay.Text = ""
+    colorDisplay.Parent = pickerContainer
+
+    local spectrumFrame = Instance.new("Frame")
+    spectrumFrame.Size = UDim2.new(1, 0, 0, 12)
+    spectrumFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    spectrumFrame.BorderColor3 = Color3.fromRGB(32, 32, 35)
+    spectrumFrame.Visible = false
+    spectrumFrame.LayoutOrder = currentIndex + 1
+    spectrumFrame.Parent = section
+
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
+        ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
+        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
+        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 255)),
+        ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
+        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0))
+    })
+    gradient.Parent = spectrumFrame
+
+    colorDisplay.MouseButton1Click:Connect(function()
+        spectrumFrame.Visible = not spectrumFrame.Visible
+    end)
+
+    local function UpdateColor(input)
+        local totalSize = spectrumFrame.AbsoluteSize.X
+        local relativeX = math.clamp(input.Position.X - spectrumFrame.AbsolutePosition.X, 0, totalSize)
+        local percentage = relativeX / totalSize
+        
+        -- Sample color sequence manually matching the UIGradient framework
+        local colorKeys = gradient.Color.Keypoints
+        local leftKey, rightKey = colorKeys[1], colorKeys[#colorKeys]
+        
+        for i = 1, #colorKeys - 1 do
+            if percentage >= colorKeys[i].Time and percentage <= colorKeys[i+1].Time then
+                leftKey = colorKeys[i]
+                rightKey = colorKeys[i+1]
+                break
+            end
+        end
+        
+        local ratio = (percentage - leftKey.Time) / (rightKey.Time - leftKey.Time)
+        local chosenColor = leftKey.Value:Lerp(rightKey.Value, ratio)
+        
+        colorDisplay.BackgroundColor3 = chosenColor
+        pcall(cb, chosenColor)
+    end
+
+    local activeSelecting = false
+    spectrumFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            activeSelecting = true
+            UpdateColor(input)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if activeSelecting and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            UpdateColor(input)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            activeSelecting = false
+        end
     end)
 end
 
