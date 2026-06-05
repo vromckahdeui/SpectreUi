@@ -505,71 +505,73 @@ function Library:CreateTab(tabName)
         end
 
         function Elements:AddDropdown(labelText, defaultSelected, optionsList, callback)
-            local currentIndex = BoxFrame:GetAttribute("OrderIndex") or 1
-            BoxFrame:SetAttribute("OrderIndex", currentIndex + 3)
+    local currentIndex = BoxFrame:GetAttribute("OrderIndex") or 1
+    BoxFrame:SetAttribute("OrderIndex", currentIndex + 3)
 
-            local cb = callback or function() end
+    local cb = callback or function() end
+    local isOpen = false
 
-            local lbl = Instance.new("TextLabel")
-            lbl.Size = UDim2.new(1, 0, 0, 11)
-            lbl.BackgroundTransparency = 1
-            lbl.Text = labelText
-            lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
-            lbl.Font = Enum.Font.Arcade
-            lbl.TextSize = 10
-            lbl.TextXAlignment = Enum.TextXAlignment.Left
-            lbl.LayoutOrder = currentIndex
-            lbl.ZIndex = 2
-            lbl.Parent = BoxFrame
+    -- Label
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 0, 11)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = labelText
+    lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+    lbl.Font = Enum.Font.Arcade
+    lbl.TextSize = 10
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.LayoutOrder = currentIndex
+    lbl.Parent = BoxFrame
 
-            local button = Instance.new("TextButton")
-            button.Size = UDim2.new(1, 0, 0, 15)
-            button.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
-            button.BorderColor3 = Color3.fromRGB(32, 32, 35)
-            button.Text = defaultSelected or "Select"
-            button.TextColor3 = Color3.fromRGB(140, 140, 145)
-            button.Font = Enum.Font.Arcade
-            button.TextSize = 9
-            button.LayoutOrder = currentIndex + 1
-            button.ZIndex = 2
-            button.Parent = BoxFrame
+    -- Button
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, 0, 0, 15)
+    button.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
+    button.BorderColor3 = Color3.fromRGB(32, 32, 35)
+    button.Text = defaultSelected or "Select"
+    button.TextColor3 = Color3.fromRGB(140, 140, 145)
+    button.Font = Enum.Font.Arcade
+    button.TextSize = 9
+    button.LayoutOrder = currentIndex + 1
+    button.Parent = BoxFrame
 
-            local dropdownFrame = Instance.new("Frame")
-            dropdownFrame.Size = UDim2.new(1, 0, 0, #optionsList * 15)
-            dropdownFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
-            dropdownFrame.BorderColor3 = Color3.fromRGB(32, 32, 35)
+    -- Dropdown list
+    local dropdownFrame = Instance.new("Frame")
+    dropdownFrame.Size = UDim2.new(1, 0, 0, #optionsList * 16)
+    dropdownFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
+    dropdownFrame.BorderColor3 = Color3.fromRGB(32, 32, 35)
+    dropdownFrame.Visible = false
+    dropdownFrame.LayoutOrder = currentIndex + 2
+    dropdownFrame.Parent = BoxFrame
+
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0, 1)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Parent = dropdownFrame
+
+    for _, option in ipairs(optionsList) do
+        local opt = Instance.new("TextButton")
+        opt.Size = UDim2.new(1, 0, 0, 15)
+        opt.BackgroundTransparency = 1
+        opt.Text = option
+        opt.TextColor3 = Color3.fromRGB(200, 200, 200)
+        opt.Font = Enum.Font.Arcade
+        opt.TextSize = 9
+        opt.Parent = dropdownFrame
+
+        opt.MouseButton1Click:Connect(function()
+            button.Text = option
             dropdownFrame.Visible = false
-            dropdownFrame.LayoutOrder = currentIndex + 2
-            dropdownFrame.ZIndex = 3
-            dropdownFrame.Parent = BoxFrame
+            isOpen = false
+            pcall(cb, option)
+        end)
+    end
 
-            local layout = Instance.new("UIListLayout")
-            layout.Parent = dropdownFrame
-
-            for _, option in ipairs(optionsList) do
-                local optionBtn = Instance.new("TextButton")
-                optionBtn.Size = UDim2.new(1, 0, 0, 15)
-                optionBtn.BackgroundTransparency = 1
-                optionBtn.Text = option
-                optionBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-                optionBtn.Font = Enum.Font.Arcade
-                optionBtn.TextSize = 9
-                optionBtn.ZIndex = 3
-                optionBtn.Parent = dropdownFrame
-
-                optionBtn.MouseButton1Click:Connect(function()
-                    button.Text = option
-                    dropdownFrame.Visible = false
-                    pcall(cb, option)
-                    BoxFrame.Size = UDim2.new(1, 0, 0, BoxList.AbsoluteContentSize.Y + 20)
-                end)
-            end
-
-            button.MouseButton1Click:Connect(function()
-                dropdownFrame.Visible = not dropdownFrame.Visible
-                BoxFrame.Size = UDim2.new(1, 0, 0, BoxList.AbsoluteContentSize.Y + 20)
-            end)
-        end
+    button.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        dropdownFrame.Visible = isOpen
+    end)
+end
 
         function Elements:AddColorPicker(labelText, defaultColor, callback)
             local currentIndex = BoxFrame:GetAttribute("OrderIndex") or 1
