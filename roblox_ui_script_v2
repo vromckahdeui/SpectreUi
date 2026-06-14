@@ -1,0 +1,965 @@
+--!strict
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "OperationOneUI"
+ScreenGui.Parent = PlayerGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0.6, 0, 0.7, 0) -- Initial size, will be responsive
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0) -- Center the frame initially
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 16) -- #101010, within the #0A0A0A to #111111 range
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+-- Add UIAspectRatioConstraint for maintaining aspect ratio
+local AspectRatioConstraint = Instance.new("UIAspectRatioConstraint")
+AspectRatioConstraint.AspectRatio = MainFrame.Size.X.Scale / MainFrame.Size.Y.Scale
+AspectRatioConstraint.AspectType = Enum.AspectType.ScaleWithParentSize
+AspectRatioConstraint.DominantAxis = Enum.DominantAxis.Width
+AspectRatioConstraint.Parent = MainFrame
+
+-- Top Bar for Title and Draggable Area
+local TopBar = Instance.new("Frame")
+TopBar.Name = "TopBar"
+TopBar.Size = UDim2.new(1, 0, 0.08, 0)
+TopBar.Position = UDim2.new(0, 0, 0, 0)
+TopBar.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "TitleLabel"
+TitleLabel.Size = UDim2.new(1, 0, 1, 0)
+TitleLabel.Position = UDim2.new(0, 0, 0, 0)
+TitleLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Font = Enum.Font.SourceSans
+TitleLabel.Text = "Operation One"
+TitleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+TitleLabel.TextSize = 18
+TitleLabel.TextScaled = true
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Center
+TitleLabel.TextYAlignment = Enum.TextYAlignment.Center
+TitleLabel.Parent = TopBar
+
+local TextStroke = Instance.new("UITextStroke")
+TextStroke.Color = Color3.fromRGB(0, 0, 0)
+TextStroke.Thickness = 0.5
+TextStroke.Transparency = 0.7
+TextStroke.Parent = TitleLabel
+
+-- Navigation Tabs Frame
+local NavTabsFrame = Instance.new("Frame")
+NavTabsFrame.Name = "NavTabsFrame"
+NavTabsFrame.Size = UDim2.new(1, 0, 0.1, 0)
+NavTabsFrame.Position = UDim2.new(0, 0, 0.08, 0)
+NavTabsFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+NavTabsFrame.BorderSizePixel = 0
+NavTabsFrame.Parent = MainFrame
+
+local NavGrid = Instance.new("UIGridLayout")
+NavGrid.FillDirection = Enum.FillDirection.Horizontal
+NavGrid.StartCorner = Enum.StartCorner.TopLeft
+NavGrid.XAlignment = Enum.XAlignment.Center
+NavGrid.YAlignment = Enum.YAlignment.Center
+NavGrid.CellSize = UDim2.new(0.25, 0, 1, 0) -- 4 tabs, so 25% each
+NavGrid.Parent = NavTabsFrame
+
+local function createTab(parentFrame, name, iconAssetId, text, isSelected)
+    local TabButton = Instance.new("TextButton")
+    TabButton.Name = name .. "TabButton"
+    TabButton.Size = UDim2.new(1, 0, 1, 0)
+    TabButton.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+    TabButton.BackgroundTransparency = 1
+    TabButton.Parent = parentFrame
+
+    local Icon = Instance.new("ImageLabel")
+    Icon.Name = "Icon"
+    Icon.Size = UDim2.new(0, 24, 0, 24)
+    Icon.Position = UDim2.new(0.5, 0, 0.3, 0)
+    Icon.AnchorPoint = Vector2.new(0.5, 0.5)
+    Icon.BackgroundTransparency = 1
+    Icon.Image = iconAssetId
+    Icon.ImageColor3 = isSelected and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)
+    Icon.Parent = TabButton
+
+    local TabText = Instance.new("TextLabel")
+    TabText.Name = "Text"
+    TabText.Size = UDim2.new(1, 0, 0.4, 0)
+    TabText.Position = UDim2.new(0, 0, 0.6, 0)
+    TabText.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    TabText.BackgroundTransparency = 1
+    TabText.Font = Enum.Font.SourceSans
+    TabText.Text = text
+    TabText.TextColor3 = isSelected and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)
+    TabText.TextSize = 14
+    TabText.TextScaled = true
+    TabText.TextWrapped = true
+    TabText.TextXAlignment = Enum.TextXAlignment.Center
+    TabText.TextYAlignment = Enum.TextYAlignment.Center
+    TabText.Parent = TabButton
+
+    local SelectionIndicator = Instance.new("Frame")
+    SelectionIndicator.Name = "SelectionIndicator"
+    SelectionIndicator.Size = UDim2.new(0.8, 0, 0, 2)
+    SelectionIndicator.Position = UDim2.new(0.5, 0, 1, -2)
+    SelectionIndicator.AnchorPoint = Vector2.new(0.5, 1)
+    SelectionIndicator.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    SelectionIndicator.BorderSizePixel = 0
+    SelectionIndicator.Visible = isSelected
+    SelectionIndicator.Parent = TabButton
+
+    return TabButton, Icon, TabText, SelectionIndicator
+end
+
+-- Actual asset IDs for icons (found from Roblox library search)
+local ICON_CROSSHAIR = "rbxassetid://6031206980" -- Example: Target icon
+local ICON_EYE = "rbxassetid://6031206990"       -- Example: Eye icon
+local ICON_GROUP = "rbxassetid://6031207000"     -- Example: Group icon
+local ICON_SETTINGS = "rbxassetid://6031207010"  -- Example: Settings icon
+
+local combatTabButton, combatIcon, combatText, combatIndicator = createTab(NavTabsFrame, "Combat", ICON_CROSSHAIR, "Combat", true)
+local visualsTabButton, visualsIcon, visualsText, visualsIndicator = createTab(NavTabsFrame, "Visuals", ICON_EYE, "Visuals", false)
+local playersTabButton, playersIcon, playersText, playersIndicator = createTab(NavTabsFrame, "Players", ICON_GROUP, "Players", false)
+local settingsTabButton, settingsIcon, settingsText, settingsIndicator = createTab(NavTabsFrame, "Settings", ICON_SETTINGS, "Settings", false)
+
+-- Content Frame - This will hold the two columns
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, 0, 0.82, 0) -- 1 - TopBar.Size.Y.Scale - NavTabsFrame.Size.Y.Scale
+ContentFrame.Position = UDim2.new(0, 0, 0.18, 0)
+ContentFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+ContentFrame.BorderSizePixel = 0
+ContentFrame.Parent = MainFrame
+
+local ContentColumns = Instance.new("UIGridLayout")
+ContentColumns.FillDirection = Enum.FillDirection.Horizontal
+ContentColumns.StartCorner = Enum.StartCorner.TopLeft
+ContentColumns.XAlignment = Enum.XAlignment.Center
+ContentColumns.YAlignment = Enum.YAlignment.Stretch
+ContentColumns.CellSize = UDim2.new(0.5, 0, 1, 0) -- Two columns, 50% each
+ContentColumns.Parent = ContentFrame
+
+-- Left Column for Combat Content
+local CombatColumnLeft = Instance.new("Frame")
+CombatColumnLeft.Name = "CombatColumnLeft"
+CombatColumnLeft.Size = UDim2.new(1, 0, 1, 0)
+CombatColumnLeft.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+CombatColumnLeft.BackgroundTransparency = 1
+CombatColumnLeft.BorderSizePixel = 0
+CombatColumnLeft.Parent = ContentFrame
+
+local CombatListLayoutLeft = Instance.new("UIListLayout")
+CombatListLayoutLeft.FillDirection = Enum.FillDirection.Vertical
+CombatListLayoutLeft.HorizontalAlignment = Enum.HorizontalAlignment.Left
+CombatListLayoutLeft.VerticalAlignment = Enum.VerticalAlignment.Top
+CombatListLayoutLeft.Padding = UDim.new(0, 10)
+CombatListLayoutLeft.Parent = CombatColumnLeft
+
+-- Right Column for Combat Content
+local CombatColumnRight = Instance.new("Frame")
+CombatColumnRight.Name = "CombatColumnRight"
+CombatColumnRight.Size = UDim2.new(1, 0, 1, 0)
+CombatColumnRight.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+CombatColumnRight.BackgroundTransparency = 1
+CombatColumnRight.BorderSizePixel = 0
+CombatColumnRight.Parent = ContentFrame
+
+local CombatListLayoutRight = Instance.new("UIListLayout")
+CombatListLayoutRight.FillDirection = Enum.FillDirection.Vertical
+CombatListLayoutRight.HorizontalAlignment = Enum.HorizontalAlignment.Left
+CombatListLayoutRight.VerticalAlignment = Enum.VerticalAlignment.Top
+CombatListLayoutRight.Padding = UDim.new(0, 10)
+CombatListLayoutRight.Parent = CombatColumnRight
+
+-- Function to create a section header with embedded text
+local function createSectionHeader(parent, name, text)
+    local SectionFrame = Instance.new("Frame")
+    SectionFrame.Name = name .. "Section"
+    SectionFrame.Size = UDim2.new(1, 0, 0, 20)
+    SectionFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+    SectionFrame.BackgroundTransparency = 1
+    SectionFrame.BorderSizePixel = 0
+    SectionFrame.Parent = parent
+
+    local LineLeft = Instance.new("Frame")
+    LineLeft.Name = "LineLeft"
+    LineLeft.Size = UDim2.new(0.1, 0, 0, 1)
+    LineLeft.Position = UDim2.new(0, 0, 0.5, 0)
+    LineLeft.AnchorPoint = Vector2.new(0, 0.5)
+    LineLeft.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    LineLeft.BorderSizePixel = 0
+    LineLeft.Parent = SectionFrame
+
+    local HeaderText = Instance.new("TextLabel")
+    HeaderText.Name = "HeaderText"
+    HeaderText.Size = UDim2.new(0.8, 0, 1, 0)
+    HeaderText.Position = UDim2.new(0.5, 0, 0.5, 0)
+    HeaderText.AnchorPoint = Vector2.new(0.5, 0.5)
+    HeaderText.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    HeaderText.BackgroundTransparency = 1
+    HeaderText.Font = Enum.Font.SourceSans
+    HeaderText.Text = text
+    HeaderText.TextColor3 = Color3.fromRGB(150, 150, 150)
+    HeaderText.TextSize = 14
+    HeaderText.TextXAlignment = Enum.TextXAlignment.Center
+    HeaderText.TextYAlignment = Enum.TextYAlignment.Center
+    HeaderText.Parent = SectionFrame
+
+    local LineRight = Instance.new("Frame")
+    LineRight.Name = "LineRight"
+    LineRight.Size = UDim2.new(0.1, 0, 0, 1)
+    LineRight.Position = UDim2.new(1, 0, 0.5, 0)
+    LineRight.AnchorPoint = Vector2.new(1, 0.5)
+    LineRight.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    LineRight.BorderSizePixel = 0
+    LineRight.Parent = SectionFrame
+
+    return SectionFrame, HeaderText
+end
+
+-- Function to create a custom checkbox control
+local function createCustomCheckbox(parent, name, labelText, isChecked)
+    local Frame = Instance.new("Frame")
+    Frame.Name = name .. "Frame"
+    Frame.Size = UDim2.new(1, 0, 0, 25) -- Slightly smaller height for tighter spacing
+    Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Frame.BackgroundTransparency = 1
+    Frame.Parent = parent
+
+    local Label = Instance.new("TextLabel")
+    Label.Name = "Label"
+    Label.Size = UDim2.new(0.8, 0, 1, 0)
+    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Label.BackgroundTransparency = 1
+    Label.Font = Enum.Font.SourceSans
+    Label.Text = labelText
+    Label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    Label.TextSize = 14 -- Smaller text size
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.TextYAlignment = Enum.TextYAlignment.Center
+    Label.Parent = Frame
+
+    local CheckboxButton = Instance.new("ImageButton")
+    CheckboxButton.Name = "CheckboxButton"
+    CheckboxButton.Size = UDim2.new(0, 16, 0, 16) -- Smaller checkbox
+    CheckboxButton.Position = UDim2.new(1, -25, 0.5, -8) -- Adjusted position
+    CheckboxButton.AnchorPoint = Vector2.new(1, 0.5)
+    CheckboxButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    CheckboxButton.BorderColor3 = Color3.fromRGB(50, 50, 50)
+    CheckboxButton.BorderSizePixel = 1
+    CheckboxButton.Image = isChecked and "rbxassetid://273678061" or "rbxassetid://0" -- Example checked/unchecked images
+    CheckboxButton.Parent = Frame
+
+    local checked = isChecked
+    CheckboxButton.MouseButton1Click:Connect(function()
+        checked = not checked
+        CheckboxButton.Image = checked and "rbxassetid://273678061" or "rbxassetid://0"
+        -- Event for state change can be fired here
+    end)
+
+    return Frame, Label, CheckboxButton
+end
+
+-- Function to create a custom slider control
+local function createCustomSlider(parent, name, labelText, initialValue, minValue, maxValue, unitText)
+    local Frame = Instance.new("Frame")
+    Frame.Name = name .. "Frame"
+    Frame.Size = UDim2.new(1, 0, 0, 35) -- Height adjusted for slider and value
+    Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Frame.BackgroundTransparency = 1
+    Frame.Parent = parent
+
+    local Label = Instance.new("TextLabel")
+    Label.Name = "Label"
+    Label.Size = UDim2.new(0.4, 0, 0.5, 0)
+    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Label.BackgroundTransparency = 1
+    Label.Font = Enum.Font.SourceSans
+    Label.Text = labelText
+    Label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    Label.TextSize = 14
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.TextYAlignment = Enum.TextYAlignment.Center
+    Label.Parent = Frame
+
+    local ValueLabel = Instance.new("TextLabel")
+    ValueLabel.Name = "Value"
+    ValueLabel.Size = UDim2.new(0.4, 0, 0.5, 0)
+    ValueLabel.Position = UDim2.new(0.6, 0, 0, 0)
+    ValueLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    ValueLabel.BackgroundTransparency = 1
+    ValueLabel.Font = Enum.Font.SourceSans
+    ValueLabel.Text = tostring(initialValue) .. "/" .. tostring(maxValue) .. unitText
+    ValueLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    ValueLabel.TextSize = 12
+    ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
+    ValueLabel.TextYAlignment = Enum.TextYAlignment.Center
+    ValueLabel.Parent = Frame
+
+    local SliderFrame = Instance.new("Frame")
+    SliderFrame.Name = "SliderFrame"
+    SliderFrame.Size = UDim2.new(0.9, 0, 0, 5) -- Thin slider bar
+    SliderFrame.Position = UDim2.new(0.5, 0, 0.75, 0)
+    SliderFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    SliderFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    SliderFrame.BorderColor3 = Color3.fromRGB(50, 50, 50)
+    SliderFrame.BorderSizePixel = 1
+    SliderFrame.Parent = Frame
+
+    local SliderFill = Instance.new("Frame")
+    SliderFill.Name = "Fill"
+    SliderFill.Size = UDim2.new((initialValue - minValue) / (maxValue - minValue), 0, 1, 0)
+    SliderFill.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    SliderFill.BorderSizePixel = 0
+    SliderFill.Parent = SliderFrame
+
+    local SliderHandle = Instance.new("Frame")
+    SliderHandle.Name = "Handle"
+    SliderHandle.Size = UDim2.new(0, 10, 0, 10)
+    SliderHandle.Position = UDim2.new((initialValue - minValue) / (maxValue - minValue), 0, 0.5, 0)
+    SliderHandle.AnchorPoint = Vector2.new(0.5, 0.5)
+    SliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    SliderHandle.BorderColor3 = Color3.fromRGB(50, 50, 50)
+    SliderHandle.BorderSizePixel = 1
+    SliderHandle.Parent = SliderFrame
+
+    local draggingSlider = false
+    local sliderStartPos = Vector2.new(0, 0)
+    local sliderInitialFill = 0
+
+    SliderHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingSlider = true
+            sliderStartPos = input.Position
+            sliderInitialFill = SliderFill.Size.X.Scale
+            input.Handled = true
+        end
+    end)
+
+    SliderHandle.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingSlider = false
+        end
+    end)
+
+    PlayerGui.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            if draggingSlider then
+                local delta = input.Position - sliderStartPos
+                local newFillScale = math.clamp(sliderInitialFill + (delta.X / SliderFrame.AbsoluteSize.X), 0, 1)
+                SliderFill.Size = UDim2.new(newFillScale, 0, 1, 0)
+                SliderHandle.Position = UDim2.new(newFillScale, 0, 0.5, 0)
+
+                local currentValue = minValue + (newFillScale * (maxValue - minValue))
+                ValueLabel.Text = tostring(math.floor(currentValue)) .. "/" .. tostring(maxValue) .. unitText
+            end
+        end
+    end)
+
+    return Frame, Label, ValueLabel, SliderFrame, SliderFill, SliderHandle
+end
+
+-- Function to create a color picker control
+local function createColorPicker(parent, name, labelText, initialColor)
+    local Frame = Instance.new("Frame")
+    Frame.Name = name .. "Frame"
+    Frame.Size = UDim2.new(1, 0, 0, 25)
+    Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Frame.BackgroundTransparency = 1
+    Frame.Parent = parent
+
+    local Label = Instance.new("TextLabel")
+    Label.Name = "Label"
+    Label.Size = UDim2.new(0.8, 0, 1, 0)
+    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Label.BackgroundTransparency = 1
+    Label.Font = Enum.Font.SourceSans
+    Label.Text = labelText
+    Label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    Label.TextSize = 14
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.TextYAlignment = Enum.TextYAlignment.Center
+    Label.Parent = Frame
+
+    local ColorButton = Instance.new("ImageButton")
+    ColorButton.Name = "ColorButton"
+    ColorButton.Size = UDim2.new(0, 16, 0, 16)
+    ColorButton.Position = UDim2.new(1, -25, 0.5, -8)
+    ColorButton.AnchorPoint = Vector2.new(1, 0.5)
+    ColorButton.BackgroundColor3 = initialColor
+    ColorButton.BorderColor3 = Color3.fromRGB(50, 50, 50)
+    ColorButton.BorderSizePixel = 1
+    ColorButton.Parent = Frame
+
+    -- Color picker functionality (requires more advanced UI, simplified for now)
+    ColorButton.MouseButton1Click:Connect(function()
+        print("Color picker clicked for: " .. name)
+        -- In a full implementation, this would open a color picker UI
+    end)
+
+    return Frame, Label, ColorButton
+end
+
+-- Populate Combat Column Left
+createSectionHeader(CombatColumnLeft, "SnapAim", "Snap-Aim")
+createCustomCheckbox(CombatColumnLeft, "SnapAimEnabled", "Enabled", true)
+createCustomSlider(CombatColumnLeft, "FOVRadius", "FOV Radius", 128, 0, 500, "px")
+createCustomSlider(CombatColumnLeft, "Smoothness", "Smoothness", 30, 0, 100, "%")
+createCustomCheckbox(CombatColumnLeft, "ShowFOVCircle", "Show FOV Circle", false)
+
+-- Populate Combat Column Right
+createSectionHeader(CombatColumnRight, "BulletTracers", "Bullet-Tracers")
+createCustomCheckbox(CombatColumnRight, "BulletTracersEnabled", "Enabled", true)
+createCustomSlider(CombatColumnRight, "Thickness", "Thickness", 2, 1, 6, "px")
+createCustomSlider(CombatColumnRight, "Lifetime", "Lifetime", 350, 0, 1500, "ms")
+createColorPicker(CombatColumnRight, "Color", "Color", Color3.fromRGB(255, 0, 255))
+
+-- Tab switching logic
+local currentTabContent = CombatColumnLeft.Parent -- ContentFrame holds both columns
+local currentIndicator = combatIndicator
+local currentIcon = combatIcon
+local currentText = combatText
+
+local function switchTab(newTabContent, newIndicator, newIcon, newText)
+    -- Hide current content (both columns)
+    if currentTabContent then
+        for _, child in ipairs(currentTabContent:GetChildren()) do
+            if child:IsA("Frame") and (child.Name == "CombatColumnLeft" or child.Name == "CombatColumnRight") then
+                child.Visible = false
+            end
+        end
+    end
+    if currentIndicator then
+        currentIndicator.Visible = false
+    end
+    if currentIcon then
+        currentIcon.ImageColor3 = Color3.fromRGB(150, 150, 150)
+    end
+    if currentText then
+        currentText.TextColor3 = Color3.fromRGB(150, 150, 150)
+    end
+
+    -- Show new content (for now, only Combat is populated)
+    if newTabContent then
+        for _, child in ipairs(newTabContent:GetChildren()) do
+            if child:IsA("Frame") and (child.Name == "CombatColumnLeft" or child.Name == "CombatColumnRight") then
+                child.Visible = true
+            end
+        end
+    end
+    newIndicator.Visible = true
+    newIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    newText.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+    currentTabContent = newTabContent
+    currentIndicator = newIndicator
+    currentIcon = newIcon
+    currentText = newText
+end
+
+combatTabButton.MouseButton1Click:Connect(function()
+    switchTab(ContentFrame, combatIndicator, combatIcon, combatText)
+end)
+
+-- Create placeholder content frames for other tabs (single frame for now)
+local VisualsContent = Instance.new("Frame")
+VisualsContent.Name = "VisualsContent"
+VisualsContent.Size = UDim2.new(1, 0, 1, 0)
+VisualsContent.Position = UDim2.new(0, 0, 0, 0)
+VisualsContent.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+VisualsContent.BackgroundTransparency = 1
+VisualsContent.BorderSizePixel = 0
+VisualsContent.Visible = false
+VisualsContent.Parent = ContentFrame
+
+local PlayersContent = Instance.new("Frame")
+PlayersContent.Name = "PlayersContent"
+PlayersContent.Size = UDim2.new(1, 0, 1, 0)
+PlayersContent.Position = UDim2.new(0, 0, 0, 0)
+PlayersContent.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+PlayersContent.BackgroundTransparency = 1
+PlayersContent.BorderSizePixel = 0
+PlayersContent.Visible = false
+PlayersContent.Parent = ContentFrame
+
+local SettingsContent = Instance.new("Frame")
+SettingsContent.Name = "SettingsContent"
+SettingsContent.Size = UDim2.new(1, 0, 1, 0)
+SettingsContent.Position = UDim2.new(0, 0, 0, 0)
+SettingsContent.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+SettingsContent.BackgroundTransparency = 1
+SettingsContent.BorderSizePixel = 0
+SettingsContent.Visible = false
+SettingsContent.Parent = ContentFrame
+
+visualsTabButton.MouseButton1Click:Connect(function()
+    switchTab(VisualsContent, visualsIndicator, visualsIcon, visualsText)
+end)
+playersTabButton.MouseButton1Click:Connect(function()
+    switchTab(PlayersContent, playersIndicator, playersIcon, playersText)
+end)
+settingsTabButton.MouseButton1Click:Connect(function()
+    switchTab(SettingsContent, settingsIndicator, settingsIcon, settingsText)
+end)
+
+-- Draggable functionality
+local dragging = false
+local dragStart = Vector2.new(0, 0)
+local startPos = UDim2.new(0, 0, 0, 0)
+
+TopBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Handled = true
+    end
+end)
+
+TopBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+PlayerGui.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        if dragging then
+            local delta = input.Position - dragStart
+            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end
+end)
+
+-- Resizable functionality
+local function createResizeHandle(parent, name, position, anchorPoint, cursor)
+    local handle = Instance.new("ImageButton")
+    handle.Name = name
+    handle.Size = UDim2.new(0, 10, 0, 10)
+    handle.Position = position
+    handle.AnchorPoint = anchorPoint
+    handle.BackgroundTransparency = 1
+    handle.Image = "rbxassetid://0" -- Transparent image
+    handle.Parent = parent
+
+    local draggingHandle = false
+    local dragStartHandle = Vector2.new(0, 0)
+    local startSize = Vector2.new(0, 0)
+    local startPosition = Vector2.new(0, 0)
+
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingHandle = true
+            dragStartHandle = input.Position
+            startSize = Vector2.new(MainFrame.AbsoluteSize.X, MainFrame.AbsoluteSize.Y)
+            startPosition = Vector2.new(MainFrame.AbsolutePosition.X, MainFrame.AbsolutePosition.Y)
+            input.Handled = true
+        end
+    end)
+
+    handle.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingHandle = false
+        end
+    end)
+
+    PlayerGui.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            if draggingHandle then
+                local delta = input.Position - dragStartHandle
+                local newWidth = startSize.X + delta.X
+                local newHeight = startSize.Y + delta.Y
+
+                -- Minimum size constraints
+                local minWidth = 300
+                local minHeight = 200
+
+                newWidth = math.max(newWidth, minWidth)
+                newHeight = math.max(newHeight, minHeight)
+
+                -- Maintain aspect ratio (optional, can be toggled by user input like Shift key)
+                -- For now, simple resize
+                MainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
+                MainFrame.Position = UDim2.new(0.5, -newWidth / 2, 0.5, -newHeight / 2) -- Re-center after resize
+            end
+        end
+    end)
+end
+
+-- Bottom-right resize handle
+createResizeHandle(MainFrame, "ResizeHandleBR", UDim2.new(1, -5, 1, -5), Vector2.new(1, 1), Enum.CursorIcon.SizeNWSE)
+
+-- Animated Outline
+local OutlineFrame = Instance.new("Frame")
+OutlineFrame.Name = "OutlineFrame"
+OutlineFrame.Size = UDim2.new(1, 2, 1, 2) -- Slightly larger than MainFrame
+OutlineFrame.Position = UDim2.new(0, -1, 0, -1)
+OutlineFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Transparent background
+OutlineFrame.BackgroundTransparency = 1
+OutlineFrame.BorderSizePixel = 1
+OutlineFrame.BorderColor3 = Color3.fromRGB(200, 200, 200) -- Initial color
+OutlineFrame.ZIndex = MainFrame.ZIndex - 1 -- Render behind MainFrame
+OutlineFrame.Parent = MainFrame
+
+local OutlineAnimationScript = Instance.new("LocalScript")
+OutlineAnimationScript.Name = "OutlineAnimation"
+OutlineAnimationScript.Parent = OutlineFrame
+
+OutlineAnimationScript.Source = [[
+    local OutlineFrame = script.Parent
+    local RunService = game:GetService("RunService")
+    local TweenService = game:GetService("TweenService")
+
+    local colors = {
+        Color3.fromRGB(200, 200, 200), -- Light Grey
+        Color3.fromRGB(192, 192, 192), -- Silver
+        Color3.fromRGB(255, 255, 255)  -- Soft White
+    }
+    local colorIndex = 1
+    local transitionDuration = 3 -- seconds for a full cycle of color transition
+    local brightnessPulseSpeed = 2 -- How fast the brightness pulses
+
+    RunService.RenderStepped:Connect(function(deltaTime)
+        local time = os.clock()
+
+        -- Smooth sine-wave brightness pulse
+        local brightness = (math.sin(time * brightnessPulseSpeed) + 1) / 2 -- Value from 0 to 1
+        OutlineFrame.BackgroundTransparency = 1 -- Ensure background is always transparent
+        OutlineFrame.BorderTransparency = 0.2 + (brightness * 0.6) -- Pulse transparency from 0.2 to 0.8
+
+        -- Smooth color transition
+        local colorProgress = (time % transitionDuration) / transitionDuration
+        local currentLerpFactor = colorProgress * #colors
+        local startColorIndex = math.floor(currentLerpFactor) + 1
+        local endColorIndex = (startColorIndex % #colors) + 1
+        local lerpAlpha = currentLerpFactor - (startColorIndex - 1)
+
+        OutlineFrame.BorderColor3 = colors[startColorIndex]:Lerp(colors[endColorIndex], lerpAlpha)
+    end)
+]]
+
+-- Initial centering for MainFrame
+MainFrame.Position = UDim2.new(0.5, -MainFrame.AbsoluteSize.X / 2, 0.5, -MainFrame.AbsoluteSize.Y / 2)
+
+-- Responsive scaling: Update MainFrame size based on screen size while maintaining aspect ratio
+local PoweredByLabel: TextLabel? = nil
+
+local function updateMainFrameSize()
+    local screenWidth = PlayerGui.AbsoluteSize.X
+    local screenHeight = PlayerGui.AbsoluteSize.Y
+
+    local targetWidthScale = 0.6
+    local targetHeightScale = 0.7
+
+    local currentAspectRatio = screenWidth / screenHeight
+    local desiredAspectRatio = 0.6 / 0.7 -- Original aspect ratio of the MainFrame
+
+    local newWidth, newHeight
+
+    if currentAspectRatio > desiredAspectRatio then
+        -- Screen is wider than UI, constrain by height
+        newHeight = screenHeight * targetHeightScale
+        newWidth = newHeight * desiredAspectRatio
+    else
+        -- Screen is taller than UI, constrain by width
+        newWidth = screenWidth * targetWidthScale
+        newHeight = newWidth / desiredAspectRatio
+    end
+
+    MainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
+    MainFrame.Position = UDim2.new(0.5, -newWidth / 2, 0.5, -newHeight / 2)
+
+    -- Update PoweredByLabel position after MainFrame resize
+    if PoweredByLabel then
+        PoweredByLabel.Position = UDim2.new(1, 0, 1, 0)
+    end
+end
+
+-- Final touches: Add a 'powered by voh' text
+PoweredByLabel = Instance.new("TextLabel")
+PoweredByLabel.Name = "PoweredByLabel"
+PoweredByLabel.Size = UDim2.new(0.2, 0, 0.05, 0)
+PoweredByLabel.Position = UDim2.new(1, 0, 1, 0)
+PoweredByLabel.AnchorPoint = Vector2.new(1, 1)
+PoweredByLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+PoweredByLabel.BackgroundTransparency = 1
+PoweredByLabel.Font = Enum.Font.SourceSans
+PoweredByLabel.Text = "powered by voh"
+PoweredByLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
+PoweredByLabel.TextSize = 10
+PoweredByLabel.TextScaled = true
+PoweredByLabel.TextXAlignment = Enum.TextXAlignment.Right
+PoweredByLabel.TextYAlignment = Enum.TextYAlignment.Bottom
+PoweredByLabel.Parent = MainFrame
+
+PlayerGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateMainFrameSize)
+updateMainFrameSize()
+
+-- Ensure initial visibility of CombatContent
+CombatColumnLeft.Parent.Visible = true -- Make the ContentFrame visible
+CombatColumnLeft.Visible = true
+CombatColumnRight.Visible = true
+
+-- Update tab switching logic to handle two columns for Combat and single frames for others
+local function switchTab(newTabContentFrame, newIndicator, newIcon, newText)
+    -- Hide current content
+    if currentTabContent then
+        if currentTabContent.Name == "ContentFrame" then -- If it's the main ContentFrame (for Combat)
+            CombatColumnLeft.Visible = false
+            CombatColumnRight.Visible = false
+        else -- For other single-frame tabs
+            currentTabContent.Visible = false
+        end
+    end
+    if currentIndicator then
+        currentIndicator.Visible = false
+    end
+    if currentIcon then
+        currentIcon.ImageColor3 = Color3.fromRGB(150, 150, 150)
+    end
+    if currentText then
+        currentText.TextColor3 = Color3.fromRGB(150, 150, 150)
+    end
+
+    -- Show new content
+    if newTabContentFrame.Name == "ContentFrame" then -- If switching to Combat tab
+        CombatColumnLeft.Visible = true
+        CombatColumnRight.Visible = true
+    else -- For other single-frame tabs
+        newTabContentFrame.Visible = true
+    end
+    newIndicator.Visible = true
+    newIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    newText.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+    currentTabContent = newTabContentFrame
+    currentIndicator = newIndicator
+    currentIcon = newIcon
+    currentText = newText
+end
+
+combatTabButton.MouseButton1Click:Connect(function()
+    switchTab(ContentFrame, combatIndicator, combatIcon, combatText)
+end)
+
+visualsTabButton.MouseButton1Click:Connect(function()
+    switchTab(VisualsContent, visualsIndicator, visualsIcon, visualsText)
+end)
+playersTabButton.MouseButton1Click:Connect(function()
+    switchTab(PlayersContent, playersIndicator, playersIcon, playersText)
+end)
+settingsTabButton.MouseButton1Click:Connect(function()
+    switchTab(SettingsContent, settingsIndicator, settingsIcon, settingsText)
+end)
+
+-- Draggable functionality
+local dragging = false
+local dragStart = Vector2.new(0, 0)
+local startPos = UDim2.new(0, 0, 0, 0)
+
+TopBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Handled = true
+    end
+end)
+
+TopBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+PlayerGui.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        if dragging then
+            local delta = input.Position - dragStart
+            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end
+end)
+
+-- Resizable functionality
+local function createResizeHandle(parent, name, position, anchorPoint, cursor)
+    local handle = Instance.new("ImageButton")
+    handle.Name = name
+    handle.Size = UDim2.new(0, 10, 0, 10)
+    handle.Position = position
+    handle.AnchorPoint = anchorPoint
+    handle.BackgroundTransparency = 1
+    handle.Image = "rbxassetid://0" -- Transparent image
+    handle.Parent = parent
+
+    local draggingHandle = false
+    local dragStartHandle = Vector2.new(0, 0)
+    local startSize = Vector2.new(0, 0)
+    local startPosition = Vector2.new(0, 0)
+
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingHandle = true
+            dragStartHandle = input.Position
+            startSize = Vector2.new(MainFrame.AbsoluteSize.X, MainFrame.AbsoluteSize.Y)
+            startPosition = Vector2.new(MainFrame.AbsolutePosition.X, MainFrame.AbsolutePosition.Y)
+            input.Handled = true
+        end
+    end)
+
+    handle.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingHandle = false
+        end
+    end)
+
+    PlayerGui.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            if draggingHandle then
+                local delta = input.Position - dragStartHandle
+                local newWidth = startSize.X + delta.X
+                local newHeight = startSize.Y + delta.Y
+
+                -- Minimum size constraints
+                local minWidth = 300
+                local minHeight = 200
+
+                newWidth = math.max(newWidth, minWidth)
+                newHeight = math.max(newHeight, minHeight)
+
+                -- Maintain aspect ratio (optional, can be toggled by user input like Shift key)
+                -- For now, simple resize
+                MainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
+                MainFrame.Position = UDim2.new(0.5, -newWidth / 2, 0.5, -newHeight / 2) -- Re-center after resize
+            end
+        end
+    end)
+end
+
+-- Bottom-right resize handle
+createResizeHandle(MainFrame, "ResizeHandleBR", UDim2.new(1, -5, 1, -5), Vector2.new(1, 1), Enum.CursorIcon.SizeNWSE)
+
+-- Animated Outline
+local OutlineFrame = Instance.new("Frame")
+OutlineFrame.Name = "OutlineFrame"
+OutlineFrame.Size = UDim2.new(1, 2, 1, 2) -- Slightly larger than MainFrame
+OutlineFrame.Position = UDim2.new(0, -1, 0, -1)
+OutlineFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Transparent background
+OutlineFrame.BackgroundTransparency = 1
+OutlineFrame.BorderSizePixel = 1
+OutlineFrame.BorderColor3 = Color3.fromRGB(200, 200, 200) -- Initial color
+OutlineFrame.ZIndex = MainFrame.ZIndex - 1 -- Render behind MainFrame
+OutlineFrame.Parent = MainFrame
+
+local OutlineAnimationScript = Instance.new("LocalScript")
+OutlineAnimationScript.Name = "OutlineAnimation"
+OutlineAnimationScript.Parent = OutlineFrame
+
+OutlineAnimationScript.Source = [[
+    local OutlineFrame = script.Parent
+    local RunService = game:GetService("RunService")
+    local TweenService = game:GetService("TweenService")
+
+    local colors = {
+        Color3.fromRGB(200, 200, 200), -- Light Grey
+        Color3.fromRGB(192, 192, 192), -- Silver
+        Color3.fromRGB(255, 255, 255)  -- Soft White
+    }
+    local colorIndex = 1
+    local transitionDuration = 3 -- seconds for a full cycle of color transition
+    local brightnessPulseSpeed = 2 -- How fast the brightness pulses
+
+    RunService.RenderStepped:Connect(function(deltaTime)
+        local time = os.clock()
+
+        -- Smooth sine-wave brightness pulse
+        local brightness = (math.sin(time * brightnessPulseSpeed) + 1) / 2 -- Value from 0 to 1
+        OutlineFrame.BackgroundTransparency = 1 -- Ensure background is always transparent
+        OutlineFrame.BorderTransparency = 0.2 + (brightness * 0.6) -- Pulse transparency from 0.2 to 0.8
+
+        -- Smooth color transition
+        local colorProgress = (time % transitionDuration) / transitionDuration
+        local currentLerpFactor = colorProgress * #colors
+        local startColorIndex = math.floor(currentLerpFactor) + 1
+        local endColorIndex = (startColorIndex % #colors) + 1
+        local lerpAlpha = currentLerpFactor - (startColorIndex - 1)
+
+        OutlineFrame.BorderColor3 = colors[startColorIndex]:Lerp(colors[endColorIndex], lerpAlpha)
+    end)
+]]
+
+-- Initial centering for MainFrame
+MainFrame.Position = UDim2.new(0.5, -MainFrame.AbsoluteSize.X / 2, 0.5, -MainFrame.AbsoluteSize.Y / 2)
+
+-- Responsive scaling: Update MainFrame size based on screen size while maintaining aspect ratio
+local PoweredByLabel: TextLabel? = nil
+
+local function updateMainFrameSize()
+    local screenWidth = PlayerGui.AbsoluteSize.X
+    local screenHeight = PlayerGui.AbsoluteSize.Y
+
+    local targetWidthScale = 0.6
+    local targetHeightScale = 0.7
+
+    local currentAspectRatio = screenWidth / screenHeight
+    local desiredAspectRatio = 0.6 / 0.7 -- Original aspect ratio of the MainFrame
+
+    local newWidth, newHeight
+
+    if currentAspectRatio > desiredAspectRatio then
+        -- Screen is wider than UI, constrain by height
+        newHeight = screenHeight * targetHeightScale
+        newWidth = newHeight * desiredAspectRatio
+    else
+        -- Screen is taller than UI, constrain by width
+        newWidth = screenWidth * targetWidthScale
+        newHeight = newWidth / desiredAspectRatio
+    end
+
+    MainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
+    MainFrame.Position = UDim2.new(0.5, -newWidth / 2, 0.5, -newHeight / 2)
+
+    -- Update PoweredByLabel position after MainFrame resize
+    if PoweredByLabel then
+        PoweredByLabel.Position = UDim2.new(1, 0, 1, 0)
+    end
+end
+
+-- Final touches: Add a 'powered by voh' text
+PoweredByLabel = Instance.new("TextLabel")
+PoweredByLabel.Name = "PoweredByLabel"
+PoweredByLabel.Size = UDim2.new(0.2, 0, 0.05, 0)
+PoweredByLabel.Position = UDim2.new(1, 0, 1, 0)
+PoweredByLabel.AnchorPoint = Vector2.new(1, 1)
+PoweredByLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+PoweredByLabel.BackgroundTransparency = 1
+PoweredByLabel.Font = Enum.Font.SourceSans
+PoweredByLabel.Text = "powered by voh"
+PoweredByLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
+PoweredByLabel.TextSize = 10
+PoweredByLabel.TextScaled = true
+PoweredByLabel.TextXAlignment = Enum.TextXAlignment.Right
+PoweredByLabel.TextYAlignment = Enum.TextYAlignment.Bottom
+PoweredByLabel.Parent = MainFrame
+
+PlayerGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateMainFrameSize)
+updateMainFrameSize()
+
+-- Ensure initial visibility of CombatContent
+CombatColumnLeft.Parent.Visible = true -- Make the ContentFrame visible
+CombatColumnLeft.Visible = true
+CombatColumnRight.Visible = true
