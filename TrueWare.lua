@@ -1,5 +1,3 @@
--- [[ OPERATION ONE UI FRAMEWORK ]] --
--- Optimized for GitHub Repository Distribution (Returns Library Object)
 
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -277,6 +275,7 @@ for i, tabName in ipairs(TabOrder) do
     TabBtn.Parent = TabContainer
 
     local TabIcon = Instance.new("ImageLabel")
+    TabIcon.Name = "TabIcon"
     TabIcon.Size = UDim2.new(0, 24, 0, 24)
     TabIcon.Position = UDim2.new(0.5, -12, 0.2, 0)
     TabIcon.BackgroundTransparency = 1
@@ -285,6 +284,7 @@ for i, tabName in ipairs(TabOrder) do
     TabIcon.Parent = TabBtn
 
     local TabText = Instance.new("TextLabel")
+    TabText.Name = "TabText"
     TabText.Size = UDim2.new(1, 0, 0, 20)
     TabText.Position = UDim2.new(0, 0, 0.6, 0)
     TabText.BackgroundTransparency = 1
@@ -295,6 +295,7 @@ for i, tabName in ipairs(TabOrder) do
     TabText.Parent = TabBtn
 
     local TabLine = Instance.new("Frame")
+    TabLine.Name = "TabLine"
     TabLine.Size = UDim2.new(0.4, 0, 0, 1)
     TabLine.Position = UDim2.new(0.3, 0, 1, -1)
     TabLine.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
@@ -302,15 +303,20 @@ for i, tabName in ipairs(TabOrder) do
     TabLine.Visible = (i == 1)
     TabLine.Parent = TabBtn
 
+    -- Safe click targeting logic looking explicitly for asset tags
     TabBtn.MouseButton1Click:Connect(function()
-        for _, p in pairs(Pages) do p.Visible = false end
-        for _, t in pairs(TabContainer:GetChildren()) do
+        for _, p in pairs(Pages) do 
+            p.Visible = false 
+        end
+        
+        for _, t in ipairs(TabContainer:GetChildren()) do
             if t:IsA("TextButton") then
-                t.TabIcon.ImageColor3 = Color3.fromRGB(130, 130, 130)
-                t.TabText.TextColor3 = Color3.fromRGB(130, 130, 130)
-                t.TabLine.Visible = false
+                if t:FindFirstChild("TabIcon") then t.TabIcon.ImageColor3 = Color3.fromRGB(130, 130, 130) end
+                if t:FindFirstChild("TabText") then t.TabText.TextColor3 = Color3.fromRGB(130, 130, 130) end
+                if t:FindFirstChild("TabLine") then t.TabLine.Visible = false end
             end
         end
+        
         Page.Visible = true
         TabIcon.ImageColor3 = Color3.fromRGB(240, 240, 240)
         TabText.TextColor3 = Color3.fromRGB(240, 240, 240)
@@ -540,7 +546,7 @@ function Library:CreateSlider(section, text, min, max, default, unit, callback)
 
     PlusBtn.MouseButton1Click:Connect(function()
         value = math.clamp(value + 1, min, max)
-        Fill.Size.Size = UDim2.new((value - min) / (max - min), 0, 1, 0)
+        Fill.Size = UDim2.new((value - min) / (max - min), 0, 1, 0)
         ValueDisplay.Text = tostring(value) .. "/" .. tostring(max) .. unit
         callback(value)
     end)
