@@ -1,0 +1,416 @@
+--[[
+ .d8888b.           888               888      d8b 888      
+d88P  Y88b          888               888      Y8P 888      
+888    888          888               888          888      
+888         8888b.  888 88888b.d88b.  888      888 88888b.  
+888            "88b 888 888 "888 "88b 888      888 888 "88b 
+888    888 .d888888 888 888  888  888 888      888 888  888 
+Y88b  d88P 888  888 888 888  888  888 888      888 888 d88P 
+ "Y8888P"  "Y888888 888 888  888  888 88888888 888 88888P"  
+                                                            
+                                                            
+============ Made by esore aka vaehz ============
+-- Optimized & Hardened Edition
+]]
+
+local module = {}
+local ts = cloneref(game:GetService("TweenService"))
+local cg = cloneref(game:GetService("CoreGui"))
+local ui = cloneref(game:GetService("UserInputService"))
+
+function module:win(title)
+    -- Fix 1: Robust asset validation
+    local ok1, win = pcall(game.GetObjects, game, "rbxassetid://96576283085736")
+    local ok2, ele = pcall(game.GetObjects, game, "rbxassetid://83539751566719")
+
+    assert(ok1 and win and win[1], "Failed to load window asset")
+    assert(ok2 and ele and ele[1], "Failed to load elements asset")
+
+    local window = win[1]
+    local elements = ele[1]
+
+    local hui = gethui or get_hidden_gui or nil
+    if hui then
+        window.Parent = hui()
+    else
+        window.Parent = cg
+    end
+
+    local topbar = window.Frame.topbar
+    topbar.title.Text = title
+
+    local closeBtn = topbar.btns.Close
+    local miniBtn = topbar.btns.Minimize
+
+    local toggleCon = nil
+    
+    -- Track global connections for cleanup (Fix 8)
+    local activeConnections = {}
+    local function trackConnection(conn)
+        table.insert(activeConnections, conn)
+        return conn
+    end
+
+    -- Fix 5: State management for dynamic window dimensions
+    local expandedSize = window.Frame.Size
+
+    -- Bottom Right Resize Scaler Setup
+    local resizer = Instance.new("Frame")
+    resizer.Name = "Resizer"
+    resizer.Size = UDim2.new(0, 20, 0, 20)
+    resizer.Position = UDim2.new(1, -20, 1, -20)
+    resizer.BackgroundTransparency = 1
+    resizer.ZIndex = 10
+    resizer.Parent = window.Frame
+
+    local resizing = false
+    local resizeMouseStart, resizeSizeStart
+
+    resizer.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            resizing = true
+            resizeMouseStart = input.Position
+            resizeSizeStart = window.Frame.AbsoluteSize
+        end
+    end)
+
+    trackConnection(ui.InputChanged:Connect(function(input)
+        if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - resizeMouseStart
+            local newSizeX = resizeSizeStart.X + delta.X
+            local newSizeY = resizeSizeStart.Y + delta.Y
+            
+            -- Keep safety limits
+            window.Frame.Size = UDim2.new(0, math.max(300, newSizeX), 0, math.max(200, newSizeY))
+            expandedSize = window.Frame.Size -- Fix 5: Capture new scale bounds
+        end
+    end))
+
+    trackConnection(ui.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            resizing = false
+        end
+    end))
+
+    local function fadebtn(btn, isIn)
+        ts:Create(
+            btn,
+            TweenInfo.new(0.15),
+            {
+                BackgroundTransparency = isIn and 0.8 or 1
+            }
+        ):Play()
+    end
+
+    local function togglewin(isIn)
+        ts:Create(
+            window.Frame,
+            TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {
+                GroupTransparency = isIn and 0 or 1
+            }
+        ):Play()
+        
+        -- Fix 5: Use dynamic size state value rather than hardcoded vectors
+        ts:Create(
+            window.Frame,
+            TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {
+                Size = isIn and expandedSize or UDim2.new(expandedSize.X.Scale, expandedSize.X.Offset, 0, 35)
+            }
+        ):Play()
+
+        window.Frame.Interactable = isIn and true or false
+    end
+
+    local function fadetopbar(isIn)
+        ts:Create(
+            topbar,
+            TweenInfo.new(0.15),
+            {
+                BackgroundTransparency = isIn and 0.7 or 0.8
+            }
+        ):Play()
+    end
+
+    closeBtn.MouseButton1Click:Connect(function()
+        -- Fix 2 & 8: Clean disconnect and free connections (Syntax error fixed here)
+        if toggleCon then toggleCon:Disconnect() end
+        for _, conn in ipairs(activeConnections) do
+            if conn.Connected then conn:Disconnect() end
+        end
+        
+        -- Fix 6: Safe teardown handling
+        if window then window:Destroy() end
+        if elements then elements:Destroy() end
+    end)
+
+    miniBtn.MouseButton1Click:Connect(function()
+        togglewin(false)
+    end)
+
+    toggleCon = ui.InputBegan:Connect(function(keyc, gamep)
+        if not gamep and keyc.KeyCode == Enum.KeyCode.K then
+            togglewin(not window.Frame.Interactable)
+        end
+    end)
+
+    local sections = {}
+    local curSelected = nil
+
+    local dragging = false
+    local dragInput, mousePos, framePos
+
+    topbar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            mousePos = input.Position
+            framePos = window.Frame.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    topbar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    trackConnection(ui.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - mousePos
+            window.Frame.Position = UDim2.new(
+                framePos.X.Scale,
+                framePos.X.Offset + delta.X,
+                framePos.Y.Scale,
+                framePos.Y.Offset + delta.Y
+            )
+        end
+    end))
+
+    local function toggletab(tab, isIn)
+        ts:Create(
+            tab,
+            TweenInfo.new(0.25),
+            {
+                GroupTransparency = isIn and 0 or 1
+            }
+        ):Play()
+        ts:Create(
+            tab,
+            TweenInfo.new(0.25),
+            {
+                Position = isIn and UDim2.new(0.5, 0, 1, 0) or UDim2.new(0.5, 0, 1.1, 0)
+            }
+        ):Play()
+        tab.Interactable = isIn and true or false
+    end
+
+    local function fadeelement(which, isIn)
+        ts:Create(
+            which,
+            TweenInfo.new(0.15),
+            {
+                BackgroundTransparency = isIn and 0.7 or 0.8
+            }
+        ):Play()
+    end
+
+    function sections:tab(title, ico)
+        local newBtn = elements.tabelement:Clone()
+        newBtn.Name = title
+
+        newBtn.Image = ico
+        newBtn.title.Text = title
+
+        newBtn.Parent = window.Frame.tabscontainer
+
+        local newSect = elements.sectioncanvas:Clone()
+        newSect.Parent = window.Frame.sectionsholder
+        newSect.GroupTransparency = 1
+        newSect.Position = UDim2.new(0.5, 0, 1.1, 0)
+        newSect.Interactable = false
+
+        local function fadetab(isIn)
+            ts:Create(
+                newBtn,
+                TweenInfo.new(0.15),
+                {ImageTransparency = isIn and 0.25 or 0.5}
+            ):Play()
+            ts:Create(
+                newBtn.title,
+                TweenInfo.new(0.15),
+                {
+                    TextTransparency = isIn and 0.5 or 1
+                }
+            ):Play()
+        end
+
+        newBtn.MouseEnter:Connect(function() fadetab(true) end)
+        newBtn.MouseLeave:Connect(function() fadetab(false) end)
+
+        newBtn.MouseButton1Click:Connect(function()
+            if curSelected == newSect then return end
+            if curSelected ~= nil then
+                toggletab(curSelected, false)
+            end
+
+            toggletab(newSect, true)
+            curSelected = newSect
+        end)
+
+        -- Fix 7: Auto-select initialization logic
+        if not curSelected then
+            toggletab(newSect, true)
+            curSelected = newSect
+            newBtn.ImageTransparency = 0.25
+            newBtn.title.TextTransparency = 0.5
+        end
+
+        local contents = {}
+
+        function contents:label(title)
+            local newLabel = elements.LabelElement:Clone()
+            newLabel.lbl.Text = title
+            newLabel.Parent = newSect.sectioncontainer
+        end
+
+        function contents:button(title, cb)
+            local newButton = elements.ButtonElement:Clone()
+            newButton.btn.lbl.Text = title
+            newButton.Parent = newSect.sectioncontainer
+
+            newButton.btn.MouseEnter:Connect(function() fadeelement(newButton.btn, true) end)
+            newButton.btn.MouseLeave:Connect(function() fadeelement(newButton.btn, false) end)
+            newButton.btn.MouseButton1Click:Connect(function()
+                -- Fix 4: Protected runtime callback
+                if cb then pcall(cb) end
+            end)
+        end
+
+        function contents:toggle(title, default, cb)
+            local toggled = default
+
+            local newToggle = elements.ToggleElement:Clone()
+            newToggle.btn.lbl.Text = title
+            newToggle.Parent = newSect.sectioncontainer
+
+            newToggle.btn.MouseEnter:Connect(function() fadeelement(newToggle.btn, true) end)
+            newToggle.btn.MouseLeave:Connect(function() fadeelement(newToggle.btn, false) end)
+
+            local togglebg = newToggle.btn.togglebg
+            local sidetog = togglebg.Frame
+
+            if toggled then
+                togglebg.BackgroundColor3 = Color3.fromRGB(74, 255, 89)
+                sidetog.AnchorPoint = Vector2.new(1, 0.5)
+                sidetog.Position = UDim2.new(1, 0, 0.5, 0)
+                -- Fix 4: Conditional wrapper
+                if cb then task.defer(cb, toggled) end
+            end
+
+            newToggle.btn.MouseButton1Click:Connect(function()
+                toggled = not toggled
+
+                ts:Create(sidetog, TweenInfo.new(0.15), {
+                    AnchorPoint = toggled and Vector2.new(1, 0.5) or Vector2.new(0, 0.5)
+                }):Play()
+
+                ts:Create(sidetog, TweenInfo.new(0.15), {
+                    Position = toggled and UDim2.new(1, 0, 0.5, 0) or UDim2.new(0, 0, 0.5, 0)
+                }):Play()
+                
+                togglebg.BackgroundColor3 = toggled and Color3.fromRGB(74, 255, 89) or Color3.fromRGB(255, 75, 75)
+
+                -- Fix 4: Protected conditional execution
+                if cb then pcall(cb, toggled) end
+            end)
+        end
+
+        function contents:textbox(title, default, cb)
+            local newtb = elements.TextboxElement:Clone()
+            newtb.frame.lbl.Text = title
+            newtb.Parent = newSect.sectioncontainer
+
+            local inp = newtb.frame.inp.lbl
+            inp.Text = default
+
+            -- Fix 4: Safe initial push
+            if default ~= "" and cb then
+                task.defer(cb, default)
+            end
+
+            inp.FocusLost:Connect(function(ep)
+                -- Fix 4: Safe input return
+                if ep and cb then
+                    pcall(cb, inp.Text)
+                end
+            end)
+        end
+
+        function contents:slider(title, min, max, default, cb)
+            local newsl = elements.SliderElement:Clone()
+            newsl.lbl.Text = title .. " : " .. tostring(default)
+            newsl.Parent = newSect.sectioncontainer
+
+            local slbtn = newsl.btn
+            local prog = slbtn.prog
+            local lastval = 0
+            local sliderDragging = false
+
+            -- Fix 3: Handle division boundaries gracefully
+            local range = max - min
+            if range <= 0 then range = 1 end
+
+            local function setFromAlpha(alpha)
+                alpha = math.clamp(alpha, 0, 1)
+                local value = math.floor(min + range * alpha + 0.5)
+                prog.Size = UDim2.new(alpha, 0, 1, 0)
+                lastval = value
+            end
+
+            local function updateFromInput(x)
+                local rel = (x - slbtn.AbsolutePosition.X) / slbtn.AbsoluteSize.X
+                setFromAlpha(rel)
+            end
+
+            setFromAlpha((default - min) / range)
+
+            slbtn.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    sliderDragging = true
+                    updateFromInput(input.Position.X)
+                end
+            end)
+
+            -- Fix 8: Routed directly through standard garbage collection arrays instead of raw global leaks
+            trackConnection(ui.InputChanged:Connect(function(input)
+                if sliderDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                    updateFromInput(input.Position.X)
+                end
+            end))
+
+            trackConnection(ui.InputEnded:Connect(function(input)
+                if sliderDragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+                    sliderDragging = false
+                    newsl.lbl.Text = title .. " : " .. tostring(lastval)
+                    -- Fix 4: Protected execution
+                    if cb then
+                        pcall(cb, lastval)
+                    end
+                end
+            end))
+        end
+
+        return contents
+    end
+
+    return sections
+end
+
+return module
